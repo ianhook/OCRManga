@@ -21,22 +21,29 @@ import android.widget.EditText;
 
 public class MainActivity extends ActionBarActivity {
 	public final static String EXTRA_MESSAGE = "com.ianhook.myfirstapp.MESSAGE";
+	public final static String FILE_NAME = "com.ianhook.myfirstapp.FILE_NAME";
 	public final static String TRANSLATION = "com.ianhook.myfirstapp.TRANSLATION";
 	
 	private static Ocr ocr;
+	
+	private String file_name;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+		file_name = this.getExternalFilesDir(null).getAbsoluteFile()+"/005_text.jpg";
+		EditText editText = (EditText) findViewById(R.id.edit_message);
+		editText.setText(file_name);
 
-		if (ocr == null) {
+		if (savedInstanceState == null) {
 			ocr = new Ocr(this, null);
 			Parameters params = ocr.getParameters();
-			params.setFlag(Parameters.FLAG_DEBUG_MODE, true);
-			params.setLanguage("jpn+eng");
-			//params.setPageSegMode(TessBaseAPI.PageSegMode.PSM_SINGLE_BLOCK_VERT_TEXT);
-			params.setPageSegMode(TessBaseAPI.PageSegMode.PSM_AUTO);
+			params.setFlag(Parameters.FLAG_DEBUG_MODE, false);
+			params.setFlag(Parameters.FLAG_ALIGN_TEXT, false);
+			params.setLanguage("jpn");
+			params.setPageSegMode(TessBaseAPI.PageSegMode.PSM_SINGLE_BLOCK_VERT_TEXT);
+			//params.setPageSegMode(TessBaseAPI.PageSegMode.PSM_AUTO);
 			ocr.setParameters(params);
 		}
 	}
@@ -67,44 +74,40 @@ public class MainActivity extends ActionBarActivity {
 	    }
 	}
 	
+
+	private class DisplayText implements CompletionCallback {
+		public final static String EXTRA_MESSAGE = "com.ianhook.myfirstapp.MESSAGE";
+	
+		@Override
+		public void onCompleted(List<OcrResult> results) {
+			
+			String message = "";
+			Intent intent = new Intent(MainActivity.this, DisplayMessageActivity.class);
+			Log.d("sendMessage", "got some results");
+			if(results.isEmpty()) {
+				message = "I was afraid of this.";
+			} else {
+				for(int i = 0; i < results.size(); i++)
+					message += results.get(i).getString();
+			}
+		    intent.putExtra(EXTRA_MESSAGE, message);
+			intent.putExtra(FILE_NAME, file_name);
+	
+			startActivity(intent);
+			
+		}
+		
+	}
+	
 	/** Called when the user clicks the Send button */
 	public void sendMessage(View view) {
 		
-		String root = this.getExternalFilesDir(null).getAbsoluteFile()+"/005_text.jpg";
-		Log.d("sendMessage", root);
-		//ImageView IV = (ImageView) findViewById(R.id."image view");
-		Bitmap bMap = BitmapFactory.decodeFile(root);
-		//IV.setImageBitmap(bMap);
+		file_name = this.getExternalFilesDir(null).getAbsoluteFile()+"/005_text.jpg";
+		Bitmap bMap = BitmapFactory.decodeFile(file_name);
 		
 		CompletionCallback displayText = new DisplayText();
 		ocr.setCompletionCallback(displayText);
 		ocr.enqueue(bMap);
-		Log.d("sendMessage", "made it");
-		
-		// Do something in response to button
-		Intent intent = new Intent(this, DisplayMessageActivity.class);
-				
-		//EditText editText = (EditText) findViewById(R.id.edit_message);
-		//String message = editText.getText().toString();
-				
-		intent.putExtra(EXTRA_MESSAGE, "hi");
-		//intent.putExtra(TRANSLATION, message);
-				
-		//startActivity(intent);
-	}
-	
-	private void displayText() {
-	    // Do something in response to button
-		Intent intent = new Intent(this, DisplayMessageActivity.class);
-		
-		EditText editText = (EditText) findViewById(R.id.edit_message);
-		String message = editText.getText().toString();
-		
-	    intent.putExtra(EXTRA_MESSAGE, message);
-		intent.putExtra(TRANSLATION, message);
-		
-		startActivity(intent);
-		
 	}
 	
 	public void openSettings() {
@@ -112,27 +115,10 @@ public class MainActivity extends ActionBarActivity {
 	}
 	
 	public void openSearch() {
-		return;	
+
+		Intent intent = new Intent(this, FileBrowserActivity.class);
+		Log.d("sendMessage", "search clicked");
+		startActivity(intent);
 	}
 }
 
-class DisplayText implements CompletionCallback {
-	public final static String EXTRA_MESSAGE = "com.ianhook.myfirstapp.MESSAGE";
-
-	@Override
-	public void onCompleted(List<OcrResult> results) {
-		
-		String message;
-		Intent intent = new Intent("com.ianhook.myfirstapp.DisplayMessageActivity");
-		if(results.isEmpty()) {
-			message = "I was afraid of this.";
-		} else {
-			message = results.get(0).getString();
-		}
-	    intent.putExtra(EXTRA_MESSAGE, message);
-		
-		
-		
-	}
-	
-}

@@ -9,13 +9,18 @@
     tools:context="com.ianhook.myfirstapp.DisplayMessageActivity" >
 
     <TextView
+        android:id="@+id/textView1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/hello_world" />
-    
-     <ImageView
-        android:id="@+id/image"
+
+    <ImageView
+        android:id="@+id/imageView1"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/textView1"
+        android:layout_marginLeft="30dp"
+        android:layout_marginTop="108dp"
+        android:src="@drawable/abc_spinner_ab_holo_light" />
 
 </RelativeLayout>

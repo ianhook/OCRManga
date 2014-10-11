@@ -7,6 +7,7 @@ import android.support.v7.app.ActionBarActivity;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.widget.ImageView;
@@ -17,24 +18,23 @@ public class DisplayMessageActivity extends ActionBarActivity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		setContentView(R.layout.activity_display_message);
 
 	    // Get the message from the intent
 	    Intent intent = getIntent();
 	    String message = intent.getStringExtra(MainActivity.EXTRA_MESSAGE);
+	    String file_name = intent.getStringExtra(MainActivity.FILE_NAME);
 	    //message = this.getExternalFilesDir(null).getAbsolutePath();
 	    // Create the text view
-	    TextView textView = new TextView(this);
+	    TextView textView = (TextView) findViewById(R.id.textView1);
 	    textView.setTextSize(40);
 	    textView.setText(message);
 
-		File root = this.getExternalFilesDir(null);
-		//ImageView IV = (ImageView) findViewById(R.id.image);
-		ImageView IV = new ImageView(this);
-		Bitmap bMap = BitmapFactory.decodeFile(root.getAbsolutePath()+"/tessdata/005.jpg");
-		IV.setImageBitmap(bMap);
+		ImageView IV = (ImageView) findViewById(R.id.imageView1);
+		IV.setImageURI(Uri.fromFile(new File(file_name)));
 
 	    // Set the text view as the activity layout
-	    setContentView(textView);
+	    //setContentView(textView);
 	}
 /*
 	@Override
