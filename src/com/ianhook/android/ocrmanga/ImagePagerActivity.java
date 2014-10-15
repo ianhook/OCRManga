@@ -1,4 +1,4 @@
-package com.ianhook.myfirstapp;
+package com.ianhook.android.ocrmanga;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -9,6 +9,8 @@ import java.util.Collections;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
+
+import com.ianhook.myfirstapp.R;
 
 import android.support.v7.app.ActionBarActivity;
 import android.support.v4.app.Fragment;

@@ -1,6 +1,8 @@
-package com.ianhook.myfirstapp;
+package com.ianhook.android.ocrmanga;
 
 import java.io.File;
+
+import com.ianhook.myfirstapp.R;
 
 import android.support.v7.app.ActionBarActivity;
 import android.content.Intent;

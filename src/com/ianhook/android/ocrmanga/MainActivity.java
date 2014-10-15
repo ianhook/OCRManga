@@ -1,4 +1,4 @@
-package com.ianhook.myfirstapp;
+package com.ianhook.android.ocrmanga;
 
 import java.util.List;
 
@@ -7,6 +7,7 @@ import com.googlecode.eyesfree.ocr.client.Ocr.CompletionCallback;
 import com.googlecode.eyesfree.ocr.client.Ocr.Parameters;
 import com.googlecode.eyesfree.ocr.client.OcrResult;
 import com.googlecode.tesseract.android.TessBaseAPI;
+import com.ianhook.myfirstapp.R;
 
 import android.support.v7.app.ActionBarActivity;
 import android.content.Intent;
@@ -20,9 +21,9 @@ import android.view.View;
 import android.widget.EditText;
 
 public class MainActivity extends ActionBarActivity {
-	public final static String EXTRA_MESSAGE = "com.ianhook.myfirstapp.MESSAGE";
-	public final static String FILE_NAME = "com.ianhook.myfirstapp.FILE_NAME";
-	public final static String TRANSLATION = "com.ianhook.myfirstapp.TRANSLATION";
+	public final static String EXTRA_MESSAGE = "com.ianhook.android.ocrmanga.MESSAGE";
+	public final static String FILE_NAME = "com.ianhook.android.ocrmanga.FILE_NAME";
+	public final static String TRANSLATION = "com.ianhook.android.ocrmanga.TRANSLATION";
 	
 	private static Ocr ocr;
 	
@@ -76,7 +77,7 @@ public class MainActivity extends ActionBarActivity {
 	
 
 	private class DisplayText implements CompletionCallback {
-		public final static String EXTRA_MESSAGE = "com.ianhook.myfirstapp.MESSAGE";
+		public final static String EXTRA_MESSAGE = "com.ianhook.android.ocrmanga.MESSAGE";
 	
 		@Override
 		public void onCompleted(List<OcrResult> results) {

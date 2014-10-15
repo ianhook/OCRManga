@@ -1,4 +1,4 @@
-package com.ianhook.myfirstapp.util;
+package com.ianhook.android.ocrmanga.util;
 
 import android.app.Activity;
 import android.os.Build;
