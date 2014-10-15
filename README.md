@@ -8,4 +8,4 @@ This project is setup with the understanding that [Tesseract](https://code.googl
 forked [here](https://github.com/ianhook/tess-two) are available somewhere.  I've got a bit more work the actual 
 project before I clean up the compile libraries.
 
-
+ Also assume that you've installed the Japanese Langauge file for Tesseract under Context.getExternalFilesDir in a folder called tessdata, which is not possible outside of developer mode I think.
