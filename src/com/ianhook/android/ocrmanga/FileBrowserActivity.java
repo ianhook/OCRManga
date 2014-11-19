@@ -43,9 +43,14 @@ public class FileBrowserActivity extends ActionBarActivity {
 	        this.objects = files;
 	    }
 	    
+	    public int getCount(){
+	        return objects.length + 1;
+	    }
+	    
 	    public File getItem(int position) {
-	        Log.d(TAG, String.format("%d %s", position, objects[position]));
-            return objects[position];
+	        if(position == 0)
+	            return objects[0].getParentFile().getParentFile();
+            return objects[position - 1];
 	    }
 
 	    public View getView(int position, View convertView, ViewGroup parent){
@@ -80,7 +85,10 @@ public class FileBrowserActivity extends ActionBarActivity {
 	            // check to see if each individual textview is null.
 	            // if not, assign some text!
 	            if (tt != null){
-	                tt.setText(i.getName());
+	                if(position != 0)
+	                    tt.setText(i.getName());
+	                else 
+                        tt.setText("..");
 	            }
 	        }
 
@@ -105,24 +113,30 @@ public class FileBrowserActivity extends ActionBarActivity {
 	    
     	Log.d(TAG, "file name: "+ file_name);
     	File temp_file = new File(file_name);
+        File directory;
     	if(temp_file.isDirectory()) {
-    	    File[] files = temp_file.listFiles();
-            
-            ListView listView = (ListView) findViewById(R.id.listView1);
-            /* TODO extend the ArrayAdapter class and override getView() to 
-             * return the type of view you want for each item.
-             */
-            mAdapter = new FileAdapter(this,
-                    R.layout.fragment_simple_list, files);
-            listView.setAdapter(mAdapter);
-            
-            listView.setOnItemClickListener(mMessageClickedHandler);
-            if(files.length > 0) {
-                setTitle(file_name);
-            }
+    	    directory = temp_file;
     	} else {
-    	    openManga(temp_file);
+    	    directory = temp_file.getParentFile();
     	}
+        File[] files = directory.listFiles();
+        
+        ListView listView = (ListView) findViewById(R.id.listView1);
+        /* TODO extend the ArrayAdapter class and override getView() to 
+         * return the type of view you want for each item.
+         */
+        mAdapter = new FileAdapter(this,
+                R.layout.fragment_simple_list, files);
+        listView.setAdapter(mAdapter);
+        
+        listView.setOnItemClickListener(mMessageClickedHandler);
+        if(files.length > 0) {
+            setTitle(new File(file_name).getPath());
+        }
+        
+        if(temp_file.isFile()) {
+            openManga(temp_file);
+        }
 	}
     
 	@Override
