@@ -276,6 +276,13 @@ public class ImagePagerActivity extends FragmentActivity {
                 } else {
                     highlighter.setVisibility(View.GONE);
                 }
+                
+                int width = highlighter.getWidth() == 0 ? 300 : highlighter.getWidth();
+                int height = highlighter.getHeight() == 0 ? 300 : highlighter.getHeight();
+                
+                highlightX = (float) Math.max(0.0, highlightX - (float)width / 2.0); 
+                highlightY = (float) Math.max(0.0, highlightY - (float)height / 2.0);
+                
                 highlighter.setX(highlightX + v.getX());
                 highlighter.setY(highlightY + v.getY());
                 Log.d(TAG, String.format("x:%f, y:%f", highlightX, highlightY));
@@ -288,8 +295,14 @@ public class ImagePagerActivity extends FragmentActivity {
 
             @Override
             public boolean onTouch(View v, MotionEvent e) {
-                highlightX = e.getX();
-                highlightY = e.getY();
+                View current = (View) v.getParent();
+                LinearLayout highlighter = (LinearLayout) current.findViewById(R.id.highlighter);
+            
+                if( highlighter.getVisibility() == View.GONE) {
+                    highlightX = e.getX();
+                    highlightY = e.getY();
+                }
+                Log.v(TAG, String.format("touch %f,%f", highlightX, highlightY));
                 
                 return false;
             }
