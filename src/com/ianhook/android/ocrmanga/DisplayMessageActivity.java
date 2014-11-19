@@ -1,21 +1,20 @@
 package com.ianhook.android.ocrmanga;
 
 import java.io.File;
-import java.util.List;
 
 import com.ianhook.myfirstapp.R;
 
-import android.support.v7.app.ActionBarActivity;
+import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MenuItem;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-public class DisplayMessageActivity extends ActionBarActivity {
+public class DisplayMessageActivity extends Activity {
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -24,16 +23,23 @@ public class DisplayMessageActivity extends ActionBarActivity {
 
 	    // Get the message from the intent
 	    Intent intent = getIntent();
-	    String message = intent.getStringExtra(MainActivity.EXTRA_MESSAGE);
-	    String file_name = intent.getStringExtra(MainActivity.FILE_NAME);
+	    String message = intent.getStringExtra(ImagePagerActivity.EXTRA_MESSAGE);
+	    String file_name = intent.getStringExtra(ImagePagerActivity.FILE_NAME);
+        Bitmap resizedBitmap = (Bitmap) intent.getParcelableExtra(ImagePagerActivity.BITMAP);
 	    //message = this.getExternalFilesDir(null).getAbsolutePath();
 	    // Create the text view
 	    TextView textView = (TextView) findViewById(R.id.textView1);
-	    textView.setTextSize(40);
+	    //textView.setTextSize(40);
 	    textView.setText(message);
 
 		ImageView IV = (ImageView) findViewById(R.id.imageView1);
-		IV.setImageURI(Uri.fromFile(new File(file_name)));
+		if(file_name.length() > 0) {
+		    IV.setImageURI(Uri.fromFile(new File(file_name)));
+		    Log.d(ImagePagerActivity.TAG, String.format("from file: '%s'", file_name));
+		} else {
+		    IV.setImageBitmap(resizedBitmap);
+            Log.d(ImagePagerActivity.TAG, "from intent");
+		}
 
 	    // Set the text view as the activity layout
 	    //setContentView(textView);

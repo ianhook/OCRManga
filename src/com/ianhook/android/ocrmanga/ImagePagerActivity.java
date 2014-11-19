@@ -1,46 +1,66 @@
 package com.ianhook.android.ocrmanga;
 
+import it.sephiroth.android.library.imagezoom.ImageViewTouch;
+import it.sephiroth.android.library.imagezoom.ImageViewTouchBase.DisplayType;
+
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
+import com.googlecode.eyesfree.ocr.client.Ocr;
+import com.googlecode.eyesfree.ocr.client.OcrResult;
+import com.googlecode.eyesfree.ocr.client.Ocr.CompletionCallback;
+import com.googlecode.eyesfree.ocr.client.Ocr.Parameters;
+import com.googlecode.tesseract.android.TessBaseAPI;
 import com.ianhook.myfirstapp.R;
 
-import android.support.v7.app.ActionBarActivity;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentStatePagerAdapter;
-import android.support.v4.view.ViewPager;
 import android.annotation.SuppressLint;
-import android.annotation.TargetApi;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Point;
 import android.graphics.Rect;
+import android.graphics.Matrix;
+import android.graphics.RectF;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentActivity;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentStatePagerAdapter;
+import android.support.v4.view.ViewPager;
 import android.util.Log;
 import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.View.OnClickListener;
+import android.view.View.OnLongClickListener;
+import android.view.View.OnTouchListener;
 import android.view.ViewGroup;
-import android.widget.ImageView;
+import android.widget.LinearLayout;
 
-public class ImagePagerActivity extends ActionBarActivity {
+public class ImagePagerActivity extends FragmentActivity {
+    public final static String EXTRA_MESSAGE = "com.ianhook.android.ocrmanga.MESSAGE";
+    public final static String FILE_NAME = "com.ianhook.android.ocrmanga.FILE_NAME";
+    public final static String BITMAP = "com.ianhook.android.ocrmanga.BITMAP";
+    public final static String TRANSLATION = "com.ianhook.android.ocrmanga.TRANSLATION";
+    private final static String PAGE_NUM = "page";
 
 	public static final String TAG = "ImagePagerActivity";
     private ImagePagerAdapter mIPA;
     private ViewPager mViewPager;
+    private static Ocr ocr;
 	
     @Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -48,7 +68,7 @@ public class ImagePagerActivity extends ActionBarActivity {
 		setContentView(R.layout.activity_image_pager);
         
         Intent intent = getIntent();
-        String file_name = intent.getStringExtra(MainActivity.FILE_NAME);
+        String file_name = intent.getStringExtra(FILE_NAME);
 		
 		mIPA = new ImagePagerAdapter(getSupportFragmentManager());
 		try {
@@ -61,16 +81,37 @@ public class ImagePagerActivity extends ActionBarActivity {
         mViewPager = (ViewPager) findViewById(R.id.pager);
         mViewPager.setAdapter(mIPA);
         mViewPager.setBackgroundColor(Color.BLACK);
-        mViewPager.setCurrentItem(mIPA.getCount());
-        
-        /*
-		if (savedInstanceState == null) {
-			getSupportFragmentManager().beginTransaction()
-					.add(R.id.container, new ImageFragment()).commit();
-		}
-		*/
+
+        SharedPreferences settings = getSharedPreferences(mIPA.getFileName(), 0);
+        mViewPager.setCurrentItem(settings.getInt(PAGE_NUM, mIPA.getCount()));
+
+        if (savedInstanceState == null) {
+            ocr = new Ocr(this, null);
+            Parameters params = ocr.getParameters();
+            params.setFlag(Parameters.FLAG_DEBUG_MODE, false);
+            params.setFlag(Parameters.FLAG_ALIGN_TEXT, false);
+            params.setLanguage("jpn");
+            params.setPageSegMode(TessBaseAPI.PageSegMode.PSM_SINGLE_BLOCK_VERT_TEXT);
+            //params.setPageSegMode(TessBaseAPI.PageSegMode.PSM_AUTO);
+            ocr.setParameters(params);
+        }
 	}
     
+    @Override
+    protected void onStop(){
+       super.onStop();
+
+      // We need an Editor object to make preference changes.
+      // All objects are from android.context.Context
+      SharedPreferences settings = getSharedPreferences(mIPA.getFileName(), 0);
+      SharedPreferences.Editor editor = settings.edit();
+      editor.putInt(PAGE_NUM, mViewPager.getCurrentItem());
+
+      // Commit the edits!
+      editor.commit();
+    }
+    
+    @SuppressWarnings("deprecation")
     @SuppressLint("NewApi")
     private Point recordDisplaySize() {
 
@@ -86,25 +127,6 @@ public class ImagePagerActivity extends ActionBarActivity {
         }
         return screenSize;
     }
-
-	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
-		// Inflate the menu; this adds items to the action bar if it is present.
-		getMenuInflater().inflate(R.menu.image_pager, menu);
-		return true;
-	}
-
-	@Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-		// Handle action bar item clicks here. The action bar will
-		// automatically handle clicks on the Home/Up button, so long
-		// as you specify a parent activity in AndroidManifest.xml.
-		int id = item.getItemId();
-		if (id == R.id.action_settings) {
-			return true;
-		}
-		return super.onOptionsItemSelected(item);
-	}
 	
 	public static class ImagePagerAdapter extends FragmentStatePagerAdapter {
 	    
@@ -131,6 +153,11 @@ public class ImagePagerActivity extends ActionBarActivity {
 	        mZipFile = new ZipFile(file);
 	        mCount = Collections.list(mZipFile.entries()).size();
 	        Log.v(TAG, String.format("%d images found", mCount));
+	    }
+	    
+	    public String getFileName() {
+	        File file = new File(mZipFile.getName());
+	        return file.getName();
 	    }
 	    
 		@Override
@@ -209,7 +236,7 @@ public class ImagePagerActivity extends ActionBarActivity {
                         scale = scaleWidth;
                 }
                 
-                Log.d(ImagePagerActivity.TAG, String.format("scale: %d, s_x:%d, s_y:%d, h:%d, w:%d, %d",
+                Log.v(ImagePagerActivity.TAG, String.format("scale: %d, s_x:%d, s_y:%d, h:%d, w:%d, %d",
                         scale, mScreenSize.x, mScreenSize.y, options.outHeight, options.outWidth, scaleHeight));
                 
             
@@ -228,25 +255,141 @@ public class ImagePagerActivity extends ActionBarActivity {
 		public static final String ARG_OBJECT = "int";
 		
 		private int position;
-		private ImageView mImageView;
+		private ImageViewTouch mImageView;
 		private Bitmap mBitmap;
+		private Bitmap mResizedBitmap;
 		private int mScale = -1;
+		private View mRootView;
+		private float highlightX;
+        private float highlightY;
+    
+        private OnLongClickListener mLongClickListener = new OnLongClickListener() {
 
-		public ImageFragment() {
-		}
+            @SuppressLint("NewApi")
+            @Override
+            public boolean onLongClick(View v) {
+                Log.d(TAG, "Long Click caught");
+                View current = (View) v.getParent();
+                LinearLayout highlighter = (LinearLayout) current.findViewById(R.id.highlighter);
+                if( highlighter.getVisibility() == View.GONE) {
+                    highlighter.setVisibility(View.VISIBLE);
+                } else {
+                    highlighter.setVisibility(View.GONE);
+                }
+                highlighter.setX(highlightX + v.getX());
+                highlighter.setY(highlightY + v.getY());
+                Log.d(TAG, String.format("x:%f, y:%f", highlightX, highlightY));
+                
+                return true;
+            }   
+        };
+        
+        private OnTouchListener mTouchListener = new OnTouchListener() {
 
+            @Override
+            public boolean onTouch(View v, MotionEvent e) {
+                highlightX = e.getX();
+                highlightY = e.getY();
+                
+                return false;
+            }
+        };
+        
+        private OnClickListener mHighlightClickListener = new OnClickListener() {
+            
+            @SuppressLint("NewApi")
+            @Override
+            public void onClick(View v) {
+                RectF outRect = new RectF();
+                Rect highlightRect = new Rect();
+                v.getHitRect(highlightRect);
+                RectF bitmapRect = mImageView.getBitmapRect();
+                Log.v(TAG, bitmapRect.toString());
+                
+                RectF highlightRectF = new RectF(highlightX,
+                        highlightY,
+                        highlightRect.width() + highlightX,
+                        highlightRect.height() + highlightY
+                        );                
+           
+                Matrix dmat = mImageView.getImageViewMatrix();
+                
+                Log.v(TAG, String.format("dmat %s", dmat.toString()));
+
+                dmat.invert(dmat);
+                dmat.mapRect(outRect, highlightRectF);
+
+                Log.v(TAG, String.format("highlight %d,%d, %d,%d", (int)highlightRect.left,
+                        (int)highlightRect.top,
+                        (int)highlightRect.width(),
+                        (int)highlightRect.height()));
+                Log.v(TAG, String.format("outRect %f,%f, %f,%f", outRect.left, 
+                        outRect.top,
+                        outRect.width(), outRect.height()));
+
+                Log.v(TAG, String.format("imageView %d,%d,%d,%d", mImageView.getLeft(), 
+                        mImageView.getTop(), mImageView.getWidth(), mImageView.getHeight()));
+                Log.v(TAG, String.format("bitmap %d,%d", mBitmap.getWidth(), mBitmap.getHeight()));
+
+                mResizedBitmap = Bitmap.createBitmap(mBitmap, 
+                        (int)outRect.left,
+                        (int)outRect.top, 
+                        (int)outRect.width(), 
+                        (int)outRect.height());
+
+                mImageView.setImageBitmap(mResizedBitmap, null, -1, 8f);
+                
+                CompletionCallback displayText = new DisplayText();
+                ocr.setCompletionCallback(displayText);
+                ocr.enqueue(mResizedBitmap);
+                
+            }
+        };
+        
+        private class DisplayText implements CompletionCallback {
+        
+            @Override
+            public void onCompleted(List<OcrResult> results) {
+                
+                String message = "";
+                Intent intent = new Intent(ImageFragment.this.getActivity(), DisplayMessageActivity.class);
+                Log.d("sendMessage", "got some results");
+                if(results.isEmpty()) {
+                    message = "I was afraid of this.";
+                } else {
+                    for(int i = 0; i < results.size(); i++)
+                        message += results.get(i).getString() + "\n";
+                }
+                intent.putExtra(ImagePagerActivity.EXTRA_MESSAGE, message);
+                intent.putExtra(ImagePagerActivity.FILE_NAME, "");
+                intent.putExtra(ImagePagerActivity.BITMAP, mResizedBitmap);
+        
+                startActivity(intent);
+                
+            }
+            
+        }
+
+        public ImageFragment() {
+        }
+        
 		@Override
 		public View onCreateView(LayoutInflater inflater, ViewGroup container,
 				Bundle savedInstanceState) {
-			View rootView = inflater.inflate(R.layout.fragment_image_pager,
+			mRootView = inflater.inflate(R.layout.fragment_image_pager,
 					container, false);
 			
 			Bundle args = getArguments();
 			position = args.getInt(ARG_OBJECT);
 			
-			mImageView = (ImageView) rootView.findViewById(R.id.imageView);
+			mImageView = (ImageViewTouch) mRootView.findViewById(R.id.imageView);
+            mImageView.setOnLongClickListener(mLongClickListener);
+            mImageView.setOnTouchListener(mTouchListener);
+            
+            LinearLayout highlighter = (LinearLayout) mRootView.findViewById(R.id.highlighter);
+            highlighter.setOnClickListener(mHighlightClickListener);
 			
-			return rootView;
+			return mRootView;
 		}
 		
 		private void drawImage() {
@@ -255,9 +398,15 @@ public class ImagePagerActivity extends ActionBarActivity {
 		        if(mScale == -1)
 		            mScale = ImagePagerAdapter.getScale(position);
 		        mBitmap = ImagePagerAdapter.getImage(position, mScale);
-                mImageView.setImageBitmap(mBitmap);
+                mImageView.setImageBitmap(mBitmap, null, -1, 8f);
+                mImageView.setDisplayType(DisplayType.FIT_TO_SCREEN);
+                
                 Log.v(TAG, String.format("image set %d", position));
+                Log.v(TAG, String.format("image dims %d,%d", mBitmap.getWidth(), mBitmap.getHeight()));
+                
 		    }
+            LinearLayout highlighter = (LinearLayout) getActivity().findViewById(R.id.highlighter);
+            highlighter.setVisibility(View.GONE);
 		}
 		
         private void deleteImage() {
@@ -272,28 +421,21 @@ public class ImagePagerActivity extends ActionBarActivity {
 	    @Override
 	    public void onActivityCreated(Bundle savedInstanceState) {
 	        super.onActivityCreated(savedInstanceState);
-	        //final int resId = ImageDetailActivity.imageResIds[mImageNum];
-	        //mImageView.setImageResource(resId); // Load image into ImageView
+	        
 	        Log.v(TAG, String.format("act create %d", position));
-	        //drawImage();
 	    }
 	    
         @Override
         public void onStart() {
             super.onStart();
-            //final int resId = ImageDetailActivity.imageResIds[mImageNum];
-            //mImageView.setImageResource(resId); // Load image into ImageView
-
+            
             Log.v(TAG, String.format("start %d", position));
-            //drawImage();
         }
         
         @Override
         public void onResume() {
             super.onResume();
-            //final int resId = ImageDetailActivity.imageResIds[mImageNum];
-            //mImageView.setImageResource(resId); // Load image into ImageView
-
+            
             Log.v(TAG, String.format("resume %d", position));
             drawImage();
         }
@@ -301,9 +443,7 @@ public class ImagePagerActivity extends ActionBarActivity {
         @Override
         public void onPause() {
             super.onPause();
-            //final int resId = ImageDetailActivity.imageResIds[mImageNum];
-            //mImageView.setImageResource(resId); // Load image into ImageView
-
+            
             Log.v(TAG, String.format("pause %d", position));
             deleteImage();
         }
@@ -311,9 +451,7 @@ public class ImagePagerActivity extends ActionBarActivity {
         @Override
         public void onStop() {
             super.onStop();
-            //final int resId = ImageDetailActivity.imageResIds[mImageNum];
-            //mImageView.setImageResource(resId); // Load image into ImageView
-
+            
             Log.v(TAG, String.format("stop %d", position));
             deleteImage();
         }

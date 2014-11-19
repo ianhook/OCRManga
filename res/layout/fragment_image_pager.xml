@@ -1,13 +1,24 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="fill_parent" 
-    android:layout_height="fill_parent">
+    android:layout_height="fill_parent"
+    android:id="@+id/frame">
     <ProgressBar style="?android:attr/progressBarStyleLarge" 
         android:layout_width="wrap_content" 
         android:layout_height="wrap_content" 
         android:layout_gravity="center"/>
-    <ImageView android:id="@+id/imageView" 
+    <it.sephiroth.android.library.imagezoom.ImageViewTouch
+        android:id="@+id/imageView" 
         android:layout_width="fill_parent" 
         android:layout_height="fill_parent" 
-        android:contentDescription="@string/imageview_description"/>
+        android:contentDescription="@string/imageview_description"
+        android:scaleType="fitCenter"/>
+    <LinearLayout
+        android:id="@+id/highlighter"
+        android:background="#50134BE8"
+        android:layout_width="100dp" 
+        android:layout_height="100dp" 
+    	android:orientation="horizontal"
+    	android:visibility="gone"
+        />
 </FrameLayout>

@@ -4,6 +4,7 @@
 	<comment></comment>
 	<projects>
 		<project>eyes-two</project>
+		<project>ImageViewTouch</project>
 		<project>tess-two</project>
 	</projects>
 	<buildSpec>

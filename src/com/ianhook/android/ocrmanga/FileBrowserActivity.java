@@ -1,55 +1,130 @@
 package com.ianhook.android.ocrmanga;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 import com.ianhook.myfirstapp.R;
 
 import android.support.v7.app.ActionBarActivity;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.database.DataSetObserver;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.ListAdapter;
 import android.widget.ListView;
+import android.widget.TextView;
 
 public class FileBrowserActivity extends ActionBarActivity {
 	private final static String TAG = "file browser";
+	private final static String PREFS = "com.ianhook.ocrmanga.FileBrowserActvity";
+	private final static String LAST_FILE_PREF = "last_file";
 	
-	private File[] files;
+	private ListAdapter mAdapter;
+	
+	private class FileAdapter extends ArrayAdapter<File> {
 
+	    private File[] objects;
+
+	    public FileAdapter(Context context, int textViewResourceId, File[] files) {
+	        super(context, textViewResourceId, files);
+	        Arrays.sort(files);
+	        this.objects = files;
+	    }
+	    
+	    public File getItem(int position) {
+	        Log.d(TAG, String.format("%d %s", position, objects[position]));
+            return objects[position];
+	    }
+
+	    public View getView(int position, View convertView, ViewGroup parent){
+
+	        // assign the view we are converting to a local variable
+	        View v = convertView;
+
+	        // first check to see if the view is null. if so, we have to inflate it.
+	        // to inflate it basically means to render, or show, the view.
+	        if (v == null) {
+	            LayoutInflater inflater = (LayoutInflater) getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+	            v = inflater.inflate(R.layout.fragment_simple_list, null);
+	        }
+
+	        /*
+	         * Recall that the variable position is sent in as an argument to this method.
+	         * The variable simply refers to the position of the current object in the list. (The ArrayAdapter
+	         * iterates through the list we sent it)
+	         * 
+	         * Therefore, i refers to the current Item object.
+	         */
+	        File i = getItem(position);
+
+	        if (i != null) {
+
+	            // This is how you obtain a reference to the TextViews.
+	            // These TextViews are created in the XML files we defined.
+
+	            TextView tt = (TextView) v.findViewById(R.id.text1);
+	            Log.d(TAG, i.getName());
+
+	            // check to see if each individual textview is null.
+	            // if not, assign some text!
+	            if (tt != null){
+	                tt.setText(i.getName());
+	            }
+	        }
+
+	        // the view must be returned to our activity
+	        return v;
+	    }
+	} 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_file_browser);
 
-	    Intent intent = getIntent();
-	    String file_name = intent.getStringExtra(MainActivity.FILE_NAME);
+        Intent intent = getIntent();
+		String file_name = intent.getStringExtra(ImagePagerActivity.FILE_NAME);
 	    
 	    //TODO add filter to listFiles calls
 	    if(file_name == null) {
-	    	Log.d(TAG, "default dir");
-            files = Environment.getExternalStorageDirectory().listFiles();
-	    } else {
-	    	Log.d(TAG, "dir: "+ file_name);
-	    	files = new File(file_name).listFiles();
+	    	Log.d(TAG, "initialize file browser");
+	        SharedPreferences settings = getSharedPreferences(PREFS, 0);
+	        file_name = settings.getString(LAST_FILE_PREF, Environment.getExternalStorageDirectory().getAbsolutePath());
 	    }
-		ListView listView = (ListView) findViewById(R.id.listView1);
-		/* TODO extend the ArrayAdapter class and override getView() to 
-		 * return the type of view you want for each item.
-		 */
-		ListAdapter adapter = new ArrayAdapter<File>(this,
-		        android.R.layout.simple_list_item_1, files);
-		listView.setAdapter(adapter);
-		
-		listView.setOnItemClickListener(mMessageClickedHandler);
+	    
+    	Log.d(TAG, "file name: "+ file_name);
+    	File temp_file = new File(file_name);
+    	if(temp_file.isDirectory()) {
+    	    File[] files = temp_file.listFiles();
+            
+            ListView listView = (ListView) findViewById(R.id.listView1);
+            /* TODO extend the ArrayAdapter class and override getView() to 
+             * return the type of view you want for each item.
+             */
+            mAdapter = new FileAdapter(this,
+                    R.layout.fragment_simple_list, files);
+            listView.setAdapter(mAdapter);
+            
+            listView.setOnItemClickListener(mMessageClickedHandler);
+            if(files.length > 0) {
+                setTitle(file_name);
+            }
+    	} else {
+    	    openManga(temp_file);
+    	}
 	}
-
+    
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		// Inflate the menu; this adds items to the action bar if it is present.
@@ -75,16 +150,30 @@ public class FileBrowserActivity extends ActionBarActivity {
 	        // Do something in response to the click
 
 	        Intent intent;
-	        if(files[position].isDirectory()) {
+	        File file = (File) mAdapter.getItem(position);
+	        if(file.isDirectory()) {
 	            intent = new Intent(FileBrowserActivity.this, FileBrowserActivity.class);
+	            intent.putExtra(ImagePagerActivity.FILE_NAME, file.getAbsolutePath());
+	            startActivity(intent);
 	        } else {
-	            intent = new Intent(FileBrowserActivity.this, ImagePagerActivity.class);
-	            
+	            openManga(file);
 	        }
-            intent.putExtra(MainActivity.FILE_NAME, files[position].getAbsolutePath());
-            startActivity(intent);
 
+	        SharedPreferences settings = getSharedPreferences(PREFS, 0);
+	        SharedPreferences.Editor editor = settings.edit();
+	        editor.putString(LAST_FILE_PREF, file.getAbsolutePath());
+
+	        // Commit the edits!
+	        editor.commit();
 	    }
 	};
+	
+	private void openManga(File file) {
+        Intent intent = new Intent(FileBrowserActivity.this, ImagePagerActivity.class);
+        intent.putExtra(ImagePagerActivity.FILE_NAME, file.getAbsolutePath());
+        
+        startActivity(intent);
+	    
+	}
 
 }

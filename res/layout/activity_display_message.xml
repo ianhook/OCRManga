@@ -8,19 +8,41 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="com.ianhook.android.ocrmanga.DisplayMessageActivity" >
 
-    <TextView
+    <com.ianhook.android.ocrmanga.OCRResults 
         android:id="@+id/textView1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/hello_world" />
+        android:text="@string/bad_ocr"
+    	android:textAppearance="?android:attr/textAppearanceListItemSmall"
+    	android:gravity="center_vertical"
+    	android:paddingStart="?android:attr/listPreferredItemPaddingStart"
+    	android:paddingLeft="?android:attr/listPreferredItemPaddingLeft"
+    	android:paddingRight="?android:attr/listPreferredItemPaddingRight"
+    	android:paddingEnd="?android:attr/listPreferredItemPaddingEnd"
+    	android:minHeight="?android:attr/listPreferredItemHeightSmall" />
 
     <ImageView
         android:id="@+id/imageView1"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
         android:layout_below="@+id/textView1"
-        android:layout_marginLeft="30dp"
-        android:layout_marginTop="108dp"
+        android:layout_width="200dp"  
+        android:layout_height="200dp"
+        android:scaleType="fitCenter"
+        android:adjustViewBounds="true"
         android:src="@drawable/abc_spinner_ab_holo_light" />
+    
+    <com.ianhook.android.ocrmanga.GooDictionary 
+        android:id="@+id/gooDict"
+        android:background="@color/red"
+        android:layout_below="@+id/imageView1"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+    	android:textAppearance="?android:attr/textAppearanceListItemSmall"
+    	android:gravity="center_vertical"
+    	android:paddingStart="?android:attr/listPreferredItemPaddingStart"
+    	android:paddingLeft="?android:attr/listPreferredItemPaddingLeft"
+    	android:paddingRight="?android:attr/listPreferredItemPaddingRight"
+    	android:paddingEnd="?android:attr/listPreferredItemPaddingEnd"
+    	android:minHeight="?android:attr/listPreferredItemHeightSmall"
+        />
 
 </RelativeLayout>
