@@ -331,6 +331,11 @@ public class ImagePagerActivity extends FragmentActivity {
 
                 dmat.invert(dmat);
                 dmat.mapRect(outRect, highlightRectF);
+                outRect.left = (float) Math.max(0.0, outRect.left);
+                outRect.top = (float) Math.max(0.0, outRect.top);
+                
+                outRect.bottom = (float) Math.min(mBitmap.getHeight(), outRect.bottom);
+                outRect.right = (float) Math.min(mBitmap.getWidth(), outRect.right);
 
                 Log.v(TAG, String.format("highlight %d,%d, %d,%d", (int)highlightRect.left,
                         (int)highlightRect.top,
