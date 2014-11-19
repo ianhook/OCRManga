@@ -49,6 +49,7 @@ import android.view.View.OnLongClickListener;
 import android.view.View.OnTouchListener;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 
 public class ImagePagerActivity extends FragmentActivity {
     public final static String EXTRA_MESSAGE = "com.ianhook.android.ocrmanga.MESSAGE";
@@ -361,6 +362,10 @@ public class ImagePagerActivity extends FragmentActivity {
                 ocr.setCompletionCallback(displayText);
                 ocr.enqueue(mResizedBitmap);
                 
+                View current = (View) v.getParent();
+                LinearLayout highlighter = (LinearLayout) current.findViewById(R.id.highlighter);
+                highlighter.setVisibility(View.GONE);
+                
             }
         };
         
@@ -423,8 +428,8 @@ public class ImagePagerActivity extends FragmentActivity {
                 Log.v(TAG, String.format("image dims %d,%d", mBitmap.getWidth(), mBitmap.getHeight()));
                 
 		    }
-            LinearLayout highlighter = (LinearLayout) getActivity().findViewById(R.id.highlighter);
-            highlighter.setVisibility(View.GONE);
+		    ProgressBar progress = (ProgressBar) getActivity().findViewById(R.id.progress);
+            progress.setVisibility(View.GONE);
 		}
 		
         private void deleteImage() {
