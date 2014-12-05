@@ -18,7 +18,7 @@ import com.googlecode.eyesfree.ocr.client.OcrResult;
 import com.googlecode.eyesfree.ocr.client.Ocr.CompletionCallback;
 import com.googlecode.eyesfree.ocr.client.Ocr.Parameters;
 import com.googlecode.tesseract.android.TessBaseAPI;
-import com.ianhook.myfirstapp.R;
+import com.ianhook.android.ocrmanga.R;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
@@ -40,8 +40,6 @@ import android.support.v4.view.ViewPager;
 import android.util.Log;
 import android.view.Display;
 import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -89,13 +87,14 @@ public class ImagePagerActivity extends FragmentActivity {
         if (savedInstanceState == null) {
             ocr = new Ocr(this, null);
             Parameters params = ocr.getParameters();
-            params.setFlag(Parameters.FLAG_DEBUG_MODE, false);
+            params.setFlag(Parameters.FLAG_DEBUG_MODE, true);
             params.setFlag(Parameters.FLAG_ALIGN_TEXT, false);
             params.setLanguage("jpn");
             params.setPageSegMode(TessBaseAPI.PageSegMode.PSM_SINGLE_BLOCK_VERT_TEXT);
             //params.setPageSegMode(TessBaseAPI.PageSegMode.PSM_AUTO);
             ocr.setParameters(params);
         }
+        
 	}
     
     @Override
@@ -302,6 +301,8 @@ public class ImagePagerActivity extends FragmentActivity {
                 if( highlighter.getVisibility() == View.GONE) {
                     highlightX = e.getX();
                     highlightY = e.getY();
+                    //highlightX = 456.438f + 150.0f;
+                    //highlightY = 166.572f + 150.0f;
                 }
                 Log.v(TAG, String.format("touch %f,%f", highlightX, highlightY));
                 
@@ -357,11 +358,11 @@ public class ImagePagerActivity extends FragmentActivity {
                         (int)outRect.height());
 
                 mImageView.setImageBitmap(mResizedBitmap, null, -1, 8f);
-                
+                /*
                 CompletionCallback displayText = new DisplayText();
                 ocr.setCompletionCallback(displayText);
                 ocr.enqueue(mResizedBitmap);
-                
+                */
                 View current = (View) v.getParent();
                 LinearLayout highlighter = (LinearLayout) current.findViewById(R.id.highlighter);
                 highlighter.setVisibility(View.GONE);

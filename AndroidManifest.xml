@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.ianhook.myfirstapp"
+    package="com.ianhook.android.ocrmanga"
     android:versionCode="1"
     android:versionName="1.0" >
 
@@ -9,6 +9,7 @@
         android:targetSdkVersion="21" />
 
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
@@ -31,7 +32,7 @@
             android:theme="@android:style/Theme.NoTitleBar" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value="com.ianhook.myfirstapp.MainActivity" />
+                android:value="com.ianhook.android.ocrmanga.FileBrowserActivity" />
         </activity>
         <activity
             android:name="com.ianhook.android.ocrmanga.FileBrowserActivity"
@@ -41,9 +42,6 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value="com.ianhook.myfirstapp.MainActivity" />
         </activity>
         <activity
             android:name="com.ianhook.android.ocrmanga.ImagePagerActivity"
@@ -52,7 +50,7 @@
             android:theme="@android:style/Theme.NoTitleBar" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value="com.ianhook.myfirstapp.MainActivity" />
+                android:value="com.ianhook.android.ocrmanga.FileBrowserActivity" />
         </activity>
     </application>
 

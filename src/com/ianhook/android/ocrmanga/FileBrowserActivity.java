@@ -1,16 +1,18 @@
 package com.ianhook.android.ocrmanga;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Arrays;
 
-import com.ianhook.myfirstapp.R;
+import org.jgap.InvalidConfigurationException;
+
+import com.ianhook.android.ocrmanga.R;
+import com.ianhook.android.ocrmanga.util.OcrGeneticDetection;
 
 import android.support.v7.app.ActionBarActivity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.database.DataSetObserver;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
@@ -162,6 +164,12 @@ public class FileBrowserActivity extends ActionBarActivity {
 	private OnItemClickListener mMessageClickedHandler = new OnItemClickListener() {
 	    public void onItemClick(AdapterView parent, View v, int position, long id) {
 	        // Do something in response to the click
+	        
+	        /*
+	        OcrGeneticDetection OGD = new OcrGeneticDetection(getBaseContext());
+	        //OGD.execute(); // this call uses the same thread for both services?
+	        OGD.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+	        */
 
 	        Intent intent;
 	        File file = (File) mAdapter.getItem(position);

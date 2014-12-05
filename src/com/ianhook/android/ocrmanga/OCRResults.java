@@ -1,6 +1,6 @@
 package com.ianhook.android.ocrmanga;
 
-import com.ianhook.myfirstapp.R;
+import com.ianhook.android.ocrmanga.R;
 
 import android.content.Context;
 import android.util.AttributeSet;

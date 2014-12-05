@@ -14,7 +14,7 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.ianhook.myfirstapp.R;
+import com.ianhook.android.ocrmanga.R;
 
 import android.content.Context;
 import android.os.AsyncTask;

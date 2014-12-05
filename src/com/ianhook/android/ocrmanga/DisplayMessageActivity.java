@@ -2,7 +2,7 @@ package com.ianhook.android.ocrmanga;
 
 import java.io.File;
 
-import com.ianhook.myfirstapp.R;
+import com.ianhook.android.ocrmanga.R;
 
 import android.app.Activity;
 import android.content.Intent;
