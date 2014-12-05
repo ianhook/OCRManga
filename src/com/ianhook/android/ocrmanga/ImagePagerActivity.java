@@ -358,11 +358,13 @@ public class ImagePagerActivity extends FragmentActivity {
                         (int)outRect.height());
 
                 mImageView.setImageBitmap(mResizedBitmap, null, -1, 8f);
-                /*
-                CompletionCallback displayText = new DisplayText();
-                ocr.setCompletionCallback(displayText);
-                ocr.enqueue(mResizedBitmap);
-                */
+                
+                if(ocr != null) {
+                    CompletionCallback displayText = new DisplayText();
+                    ocr.setCompletionCallback(displayText);
+                    ocr.enqueue(mResizedBitmap);
+                }
+                
                 View current = (View) v.getParent();
                 LinearLayout highlighter = (LinearLayout) current.findViewById(R.id.highlighter);
                 highlighter.setVisibility(View.GONE);
