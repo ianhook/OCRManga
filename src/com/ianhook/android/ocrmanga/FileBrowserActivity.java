@@ -3,8 +3,6 @@ package com.ianhook.android.ocrmanga;
 import java.io.File;
 import java.util.Arrays;
 
-import org.jgap.InvalidConfigurationException;
-
 import com.ianhook.android.ocrmanga.R;
 import com.ianhook.android.ocrmanga.util.OcrGeneticDetection;
 
@@ -46,10 +44,12 @@ public class FileBrowserActivity extends ActionBarActivity {
 	    }
 	    
 	    public int getCount(){
+	        //TODO filtering
 	        return objects.length + 1;
 	    }
 	    
 	    public File getItem(int position) {
+            //TODO filtering
 	        if(position == 0)
 	            return objects[0].getParentFile().getParentFile();
             return objects[position - 1];
@@ -76,6 +76,7 @@ public class FileBrowserActivity extends ActionBarActivity {
 	         */
 	        File i = getItem(position);
 
+	        //TODO check for file vs directory and display different view
 	        if (i != null) {
 
 	            // This is how you obtain a reference to the TextViews.
@@ -106,15 +107,13 @@ public class FileBrowserActivity extends ActionBarActivity {
         Intent intent = getIntent();
 		String file_name = intent.getStringExtra(ImagePagerActivity.FILE_NAME);
 	    
-	    //TODO add filter to listFiles calls
 	    if(file_name == null) {
 	    	Log.d(TAG, "initialize file browser");
 	        SharedPreferences settings = getSharedPreferences(PREFS, 0);
 	        file_name = settings.getString(LAST_FILE_PREF, Environment.getExternalStorageDirectory().getAbsolutePath());
 	    }
 	    
-    	Log.d(TAG, "file name: "+ file_name);
-    	File temp_file = new File(file_name);
+	    File temp_file = new File(file_name);
         File directory;
     	if(temp_file.isDirectory()) {
     	    directory = temp_file;
@@ -124,17 +123,16 @@ public class FileBrowserActivity extends ActionBarActivity {
         File[] files = directory.listFiles();
         
         ListView listView = (ListView) findViewById(R.id.listView1);
-        /* TODO extend the ArrayAdapter class and override getView() to 
-         * return the type of view you want for each item.
-         */
-        mAdapter = new FileAdapter(this,
-                R.layout.fragment_simple_list, files);
-        listView.setAdapter(mAdapter);
         
-        listView.setOnItemClickListener(mMessageClickedHandler);
-        if(files.length > 0) {
-            setTitle(new File(file_name).getPath());
+        if(files != null) {
+            mAdapter = new FileAdapter(this,
+                    R.layout.fragment_simple_list, files);
+            listView.setAdapter(mAdapter);
+            
+            listView.setOnItemClickListener(mMessageClickedHandler);
         }
+        
+        setTitle(directory.getPath());
         
         if(temp_file.isFile()) {
             openManga(temp_file);
@@ -165,15 +163,16 @@ public class FileBrowserActivity extends ActionBarActivity {
 	    public void onItemClick(AdapterView parent, View v, int position, long id) {
 	        // Do something in response to the click
 	        
-	        /*
-	        OcrGeneticDetection OGD = new OcrGeneticDetection(getBaseContext());
-	        //OGD.execute(); // this call uses the same thread for both services?
-	        OGD.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-	        */
+	        if(OcrGeneticDetection.mDoGA) {
+	            OcrGeneticDetection OGD = new OcrGeneticDetection(getBaseContext());
+	            //OGD.execute(); // this call uses the same thread for both services?
+	            OGD.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+	        }
 
 	        Intent intent;
 	        File file = (File) mAdapter.getItem(position);
 	        if(file.isDirectory()) {
+	            Log.d(TAG, "opening dir: " + file.getAbsolutePath());
 	            intent = new Intent(FileBrowserActivity.this, FileBrowserActivity.class);
 	            intent.putExtra(ImagePagerActivity.FILE_NAME, file.getAbsolutePath());
 	            startActivity(intent);

@@ -19,8 +19,10 @@ import com.googlecode.eyesfree.ocr.client.Ocr.CompletionCallback;
 import com.googlecode.eyesfree.ocr.client.Ocr.Parameters;
 import com.googlecode.tesseract.android.TessBaseAPI;
 import com.ianhook.android.ocrmanga.R;
+import com.ianhook.android.ocrmanga.util.OcrGeneticDetection;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
@@ -32,6 +34,7 @@ import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
@@ -42,6 +45,7 @@ import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.WindowManager;
 import android.view.View.OnClickListener;
 import android.view.View.OnLongClickListener;
 import android.view.View.OnTouchListener;
@@ -84,7 +88,7 @@ public class ImagePagerActivity extends FragmentActivity {
         SharedPreferences settings = getSharedPreferences(mIPA.getFileName(), 0);
         mViewPager.setCurrentItem(settings.getInt(PAGE_NUM, mIPA.getCount()));
 
-        if (savedInstanceState == null) {
+        if (savedInstanceState == null && !OcrGeneticDetection.mDoGA) {
             ocr = new Ocr(this, null);
             Parameters params = ocr.getParameters();
             params.setFlag(Parameters.FLAG_DEBUG_MODE, true);
@@ -95,6 +99,7 @@ public class ImagePagerActivity extends FragmentActivity {
             ocr.setParameters(params);
         }
         
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 	}
     
     @Override

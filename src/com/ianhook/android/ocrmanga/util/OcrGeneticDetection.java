@@ -24,6 +24,7 @@ import org.jgap.impl.DoubleGene;
 import org.jgap.impl.IntegerGene;
 
 import android.content.Context;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Environment;
 import android.os.Handler;
@@ -38,6 +39,8 @@ import com.googlecode.tesseract.android.TessBaseAPI;
 
 public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
     private static final String TAG = "com.ianhook.OcrGeneticDetection";
+    public final static Boolean mDoGA = false;
+    
     private Context mContext;
     private int mCurrentPosition;
     private int mLastQueued;
@@ -47,6 +50,9 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
     private int mResult;
     private File[] mImageDir;
     private Genotype population;
+    private boolean mDebug = false;
+    private int mCurrentChrome;
+    private int mBest;
     
     public class GeneDescriptor {
         public String name;
@@ -82,9 +88,9 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
         mCurrentPosition = 0;
         
         // Edge-based thresholding
-        geneDescriptions.add(new GeneDescriptor("edge_tile_x", "int", 1, 50));
-        geneDescriptions.add(new GeneDescriptor("edge_tile_y", "int", 1, 100));
-        geneDescriptions.add(new GeneDescriptor("edge_thresh", "int", 1, 100));
+        geneDescriptions.add(new GeneDescriptor("edge_tile_x", "int", 10, 50));
+        geneDescriptions.add(new GeneDescriptor("edge_tile_y", "int", 10, 100));
+        geneDescriptions.add(new GeneDescriptor("edge_thresh", "int", 10, 100));
         geneDescriptions.add(new GeneDescriptor("edge_avg_thresh", "int", 1, 50));
         geneDescriptions.add(new GeneDescriptor("single_min_aspect", "double", .01f, 1.0f));
         geneDescriptions.add(new GeneDescriptor("single_max_aspect", "double", 1.0f, 10.0f));
@@ -127,7 +133,12 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
         public float skew_search_min_delta;
         sampleGenes[27] = new DoubleGene(conf, 0.0f, 1.0f);
          */
-        
+      
+        startOcr();
+
+    }
+    
+    private void startOcr() {
         mCurrentOcr = new Ocr(mContext, null);
         com.googlecode.eyesfree.ocr.client.Ocr.Parameters params1 = mCurrentOcr.getParameters();
         params1.setFlag(com.googlecode.eyesfree.ocr.client.Ocr.Parameters.FLAG_DEBUG_MODE, false);
@@ -136,8 +147,6 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
         params1.setPageSegMode(TessBaseAPI.PageSegMode.PSM_SINGLE_BLOCK_VERT_TEXT);
         //params.setPageSegMode(TessBaseAPI.PageSegMode.PSM_AUTO);
         mCurrentOcr.setParameters(params1);
-
-
     }
     
     public void doLearning() throws InvalidConfigurationException {
@@ -161,14 +170,32 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
         Chromosome returnVal = new Chromosome(conf, sampleGenes);
         conf.setSampleChromosome(returnVal);
         
-        Genotype population = Genotype.randomInitialGenotype(conf);
-        Log.d(TAG, "start evolution");
-        population.evolve();
-        Log.d(TAG, "evolution ended");
+        population = Genotype.randomInitialGenotype(conf);
+        int generation = 0;
+        mBest = 0;
+        while(true) {
+            startOcr();
+            mCurrentChrome = 0;
+            Log.d(TAG, String.format("start evolution: %d", generation));
+            population.evolve();
+            mCurrentOcr.release();
+            ((OcrFitnessFunction) myFunc).printBest();
+            Log.d(TAG, String.format("end evolution: %d", generation));
+            
+        }
         
     }
     
     public class OcrFitnessFunction extends FitnessFunction {
+        
+        public void printBest() {
+            boolean currentDebug = mDebug;
+            mDebug = true;
+            IChromosome best = population.getFittestChromosome();
+            evaluate(best);
+            mDebug = currentDebug;
+            
+        }
 
         @Override
         protected double evaluate(IChromosome arg0) {
@@ -177,24 +204,21 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
             HydrogenTextDetector tester = new HydrogenTextDetector();
             Parameters params = tester.getParameters();
             Field[] fields = params.getClass().getFields();
+            com.googlecode.eyesfree.ocr.client.Ocr.Parameters params1 = mCurrentOcr.getParameters();
             
             for(Field f : fields) {
-                //Log.d("setParams", f.getName());
+                if(mDebug)
+                    Log.d("setParams", f.getName());
                 for (int i = 0; i < geneDescriptions.size(); i++) {
                     //Log.d("setParams", "gene:" + geneDescriptions.get(i).name);
                     if(f.getName().equals(geneDescriptions.get(i).name)) {
                         //Log.d("setParams", "found");
                         
                         try {
-                            if(geneDescriptions.get(i).type.equals("int")) {
-                                f.set(params, (int)arg0.getGene(i).getAllele());
+                            params1.setVariable(f.getName(), arg0.getGene(i).getAllele().toString());
+                            if(mDebug)
                                 Log.d("setParams", String.format("%s: %s, %s", f.getName(), f.get(params), 
-                                    arg0.getGene(i).getAllele().toString()));
-                            } else if(geneDescriptions.get(i).type.equals("double")) {
-                                f.set(params, ((Double)arg0.getGene(i).getAllele()).floatValue());
-                                Log.d("setParams", String.format("%s: %s, %s", f.getName(), f.get(params), 
-                                    arg0.getGene(i).getAllele().toString()));
-                            }
+                                        arg0.getGene(i).getAllele().toString()));
                         } catch (IllegalAccessException
                                 | IllegalArgumentException e) {
                             // TODO Auto-generated catch block
@@ -205,7 +229,8 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
                     }
                 }
             }
-            
+
+            mCurrentOcr.setParameters(params1);
             
             //Initialize the trials
             mNotDone = true;
@@ -219,7 +244,17 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
                 doOcr();
             }
             
-            Log.d(TAG, String.format("Fitness Result: %d", mResult));
+            Log.d(TAG, String.format("Fitness Result %d: %d -> %d", mCurrentChrome, mResult, mBest));
+            if(mResult > mBest) {
+                Log.d("BestParams", String.format("Fitness Result %d: %d -> %d", mCurrentChrome, mResult, mBest));
+                for (int i = 0; i < geneDescriptions.size(); i++) {
+                    Log.d("BestParams", String.format("%s: %s", geneDescriptions.get(i).name, 
+                            arg0.getGene(i).getAllele().toString()));
+                }
+                mBest = mResult;
+            }
+
+            mCurrentChrome += 1;
             
             return mResult;
         }
@@ -236,7 +271,7 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
                 // get bitmap at current position
                 mLastQueued = mCurrentPosition;
     
-                Log.d(TAG, String.format("image %d, %s", mCurrentPosition, mImageDir[mCurrentPosition].getName()));
+                //Log.d(TAG, String.format("image %d, %s", mCurrentPosition, mImageDir[mCurrentPosition].getName()));
     
                 CompletionCallback displayText = new OcrCompleted();
                 mCurrentOcr.setCompletionCallback(displayText);
@@ -291,7 +326,7 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
                 
                 String expected = text.toString();
                 int distance = StringUtils.getLevenshteinDistance(message, expected);
-                int base = 400;
+                int base = expected.length() * 100;
                 int temp = 0;
                 
                 // we give no reward for finding nothing
@@ -299,9 +334,10 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
                     temp = Math.abs(distance) + Math.abs(message.length() - expected.length());
                     mResult += base - temp;
                 if(base < temp) {
-                    Log.e(TAG, String.format("base too low: &d", temp));
+                    Log.e(TAG, String.format("base too low: %d", temp));
                 }
                 
+                /*
                 ArrayList<Integer> list = new ArrayList<Integer>();
                 list.add(331);
                 list.add(717);
@@ -310,17 +346,14 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
                 list.add(1523);
                 list.add(1915);
                 list.add(2303);
-                
+                */
 
-                if(!list.contains(mResult)) {
+                if(mDebug) {
                     Log.d(TAG, String.format("image %d, %s", mCurrentPosition, mImageDir[mCurrentPosition].getName()));
                     //Log.d(TAG, String.format("str %d, %s", mCurrentPosition, stringFile.getAbsolutePath()));
                     Log.d(TAG, "Message: " + message.replace("\n","\\n"));
                     Log.d(TAG, "Expected: " + expected.replace("\n", "\\n"));
                     Log.d(TAG, String.format("distance: %d, %d", temp, mResult));
-                } else {
-                    Log.d(TAG, "steady");
-                    
                 }
                 
                 //score message
