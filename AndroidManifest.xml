@@ -24,7 +24,6 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </service>
-
         <activity
             android:name="com.ianhook.android.ocrmanga.DisplayMessageActivity"
             android:label="@string/title_activity_display_message"

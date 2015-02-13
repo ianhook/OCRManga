@@ -17,12 +17,14 @@ import com.googlecode.eyesfree.ocr.client.Ocr;
 import com.googlecode.eyesfree.ocr.client.OcrResult;
 import com.googlecode.eyesfree.ocr.client.Ocr.CompletionCallback;
 import com.googlecode.eyesfree.ocr.client.Ocr.Parameters;
+import com.googlecode.eyesfree.textdetect.Thresholder;
+import com.googlecode.leptonica.android.ReadFile;
+import com.googlecode.leptonica.android.WriteFile;
 import com.googlecode.tesseract.android.TessBaseAPI;
 import com.ianhook.android.ocrmanga.R;
 import com.ianhook.android.ocrmanga.util.OcrGeneticDetection;
 
 import android.annotation.SuppressLint;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
@@ -34,7 +36,6 @@ import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.PowerManager;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
@@ -89,6 +90,7 @@ public class ImagePagerActivity extends FragmentActivity {
         mViewPager.setCurrentItem(settings.getInt(PAGE_NUM, mIPA.getCount()));
 
         if (savedInstanceState == null && !OcrGeneticDetection.mDoGA) {
+            Log.d(TAG, "creating OCR");
             ocr = new Ocr(this, null);
             Parameters params = ocr.getParameters();
             params.setFlag(Parameters.FLAG_DEBUG_MODE, true);
@@ -217,8 +219,23 @@ public class ImagePagerActivity extends FragmentActivity {
 	        if(bm == null) {
 	            Log.e(TAG, String.format("what happened here? size: %d", imageArray.get(position).getSize()) );
 	        }
-            return bm;
+	        
+            //return getThreshed(bm);
+	        return bm;
 	    }
+        
+        private static Bitmap getThreshed(Bitmap bm) {
+            // this is the one that we actually use
+            //return WriteFile.writeBitmap(Thresholder.edgeAdaptiveThreshold(ReadFile.readBitmap(bm)));
+            //return WriteFile.writeBitmap(Thresholder.edgeAdaptiveThreshold(ReadFile.readBitmap(bm), 100, 100, 32, 1));
+            
+            //causes blocks of differently thresholded areas
+            //return WriteFile.writeBitmap(Thresholder.fisherAdaptiveThreshold(ReadFile.readBitmap(bm)));
+            //return WriteFile.writeBitmap(Thresholder.fisherAdaptiveThreshold(ReadFile.readBitmap(bm), 1, 1));
+            
+            //makes outlines around things, small letters become too bold
+            return WriteFile.writeBitmap(Thresholder.sobelEdgeThreshold(ReadFile.readBitmap(bm)));
+        }
         
         private static int getScale(int position) {
             int scale = 1;
@@ -362,7 +379,7 @@ public class ImagePagerActivity extends FragmentActivity {
                         (int)outRect.width(), 
                         (int)outRect.height());
 
-                mImageView.setImageBitmap(mResizedBitmap, null, -1, 8f);
+                mImageView.setImageBitmap(mResizedBitmap, null, 1f, 8f);
                 
                 if(ocr != null) {
                     CompletionCallback displayText = new DisplayText();
@@ -384,12 +401,14 @@ public class ImagePagerActivity extends FragmentActivity {
                 
                 String message = "";
                 Intent intent = new Intent(ImageFragment.this.getActivity(), DisplayMessageActivity.class);
-                Log.d("sendMessage", "got some results");
+                Log.d("DisplayText", "got some results");
                 if(results.isEmpty()) {
                     message = "I was afraid of this.";
                 } else {
-                    for(int i = 0; i < results.size(); i++)
+                    for(int i = 0; i < results.size(); i++) {
                         message += results.get(i).getString() + "\n";
+                        Log.d("DisplayText", results.get(i).getBounds().flattenToString());
+                    }
                 }
                 intent.putExtra(ImagePagerActivity.EXTRA_MESSAGE, message);
                 intent.putExtra(ImagePagerActivity.FILE_NAME, "");
@@ -429,8 +448,8 @@ public class ImagePagerActivity extends FragmentActivity {
 		        if(mScale == -1)
 		            mScale = ImagePagerAdapter.getScale(position);
 		        mBitmap = ImagePagerAdapter.getImage(position, mScale);
-                mImageView.setImageBitmap(mBitmap, null, -1, 8f);
-                mImageView.setDisplayType(DisplayType.FIT_TO_SCREEN);
+                mImageView.setImageBitmap(mBitmap, null, 1f, 8f);
+                mImageView.setDisplayType(DisplayType.NONE);
                 
                 Log.v(TAG, String.format("image set %d", position));
                 Log.v(TAG, String.format("image dims %d,%d", mBitmap.getWidth(), mBitmap.getHeight()));

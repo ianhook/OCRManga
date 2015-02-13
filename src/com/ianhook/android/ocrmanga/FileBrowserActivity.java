@@ -164,8 +164,10 @@ public class FileBrowserActivity extends ActionBarActivity {
 	        // Do something in response to the click
 	        
 	        if(OcrGeneticDetection.mDoGA) {
-	            OcrGeneticDetection OGD = new OcrGeneticDetection(getBaseContext());
-	            //OGD.execute(); // this call uses the same thread for both services?
+	            Log.d(TAG, "Evole OCR");
+	            final OcrGeneticDetection OGD = new OcrGeneticDetection(getBaseContext());
+	            
+	            //OGD.startOcr(ocrInit);	            
 	            OGD.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
 	        }
 
@@ -177,6 +179,12 @@ public class FileBrowserActivity extends ActionBarActivity {
 	            intent.putExtra(ImagePagerActivity.FILE_NAME, file.getAbsolutePath());
 	            startActivity(intent);
 	        } else {
+	            /*
+	            Log.d(TAG, "opening dir: " + file.getParentFile().getAbsolutePath());
+	            intent = new Intent(FileBrowserActivity.this, FileBrowserActivity.class);
+	            intent.putExtra(ImagePagerActivity.FILE_NAME, file.getParentFile().getAbsolutePath());
+	            startActivity(intent);
+	            */
 	            openManga(file);
 	        }
 

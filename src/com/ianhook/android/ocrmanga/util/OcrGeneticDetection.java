@@ -5,7 +5,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 
@@ -24,12 +23,11 @@ import org.jgap.impl.DoubleGene;
 import org.jgap.impl.IntegerGene;
 
 import android.content.Context;
-import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Environment;
-import android.os.Handler;
 import android.util.Log;
 import com.googlecode.eyesfree.ocr.client.Ocr;
+import com.googlecode.eyesfree.ocr.client.Ocr.InitCallback;
 import com.googlecode.eyesfree.ocr.client.Ocr.Job;
 import com.googlecode.eyesfree.ocr.client.OcrResult;
 import com.googlecode.eyesfree.ocr.client.Ocr.CompletionCallback;
@@ -53,6 +51,9 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
     private boolean mDebug = false;
     private int mCurrentChrome;
     private int mBest;
+    private int mGeneration;
+    private Object mServiceLock;
+    private FitnessFunction myFunc;
     
     public class GeneDescriptor {
         public String name;
@@ -86,6 +87,8 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
     public OcrGeneticDetection(Context context){
         mContext = context;
         mCurrentPosition = 0;
+        mGeneration = 0;
+        mServiceLock = new Object();
         
         // Edge-based thresholding
         geneDescriptions.add(new GeneDescriptor("edge_tile_x", "int", 10, 50));
@@ -133,20 +136,42 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
         public float skew_search_min_delta;
         sampleGenes[27] = new DoubleGene(conf, 0.0f, 1.0f);
          */
-      
-        startOcr();
 
     }
     
-    private void startOcr() {
-        mCurrentOcr = new Ocr(mContext, null);
-        com.googlecode.eyesfree.ocr.client.Ocr.Parameters params1 = mCurrentOcr.getParameters();
-        params1.setFlag(com.googlecode.eyesfree.ocr.client.Ocr.Parameters.FLAG_DEBUG_MODE, false);
-        params1.setFlag(com.googlecode.eyesfree.ocr.client.Ocr.Parameters.FLAG_ALIGN_TEXT, false);
-        params1.setLanguage("jpn");
-        params1.setPageSegMode(TessBaseAPI.PageSegMode.PSM_SINGLE_BLOCK_VERT_TEXT);
-        //params.setPageSegMode(TessBaseAPI.PageSegMode.PSM_AUTO);
-        mCurrentOcr.setParameters(params1);
+    public void startOcr() {
+        InitCallback ocrInit = new InitCallback() {
+
+            @Override
+            public void onInitialized(int status) {
+
+                synchronized(mServiceLock) {
+                    com.googlecode.eyesfree.ocr.client.Ocr.Parameters params1 = mCurrentOcr.getParameters();
+                    params1.setFlag(com.googlecode.eyesfree.ocr.client.Ocr.Parameters.FLAG_DEBUG_MODE, false);
+                    params1.setFlag(com.googlecode.eyesfree.ocr.client.Ocr.Parameters.FLAG_ALIGN_TEXT, false);
+                    params1.setLanguage("jpn");
+                    params1.setPageSegMode(TessBaseAPI.PageSegMode.PSM_SINGLE_BLOCK_VERT_TEXT);
+                    //params.setPageSegMode(TessBaseAPI.PageSegMode.PSM_AUTO);
+                    mCurrentOcr.setParameters(params1);
+                    mServiceLock.notify();
+                }
+            }
+            
+            
+        };
+        
+        synchronized(mServiceLock) {
+            //mCurrentOcr = new Ocr(mContext, null);
+            mCurrentOcr = new Ocr(mContext, ocrInit);
+            try {
+                Log.d(TAG, "wait on service");
+                mServiceLock.wait();
+                //Log.d(TAG, "wait on service done");
+            } catch (InterruptedException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
     }
     
     public void doLearning() throws InvalidConfigurationException {
@@ -161,8 +186,7 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
         for(int i = 0; i < geneDescriptions.size(); i++) {
             sampleGenes[i] = geneDescriptions.get(i).getGene(conf);
         }
-        FitnessFunction myFunc =
-                new OcrFitnessFunction( );
+        myFunc = new OcrFitnessFunction( );
 
         conf.setFitnessFunction( myFunc );
         
@@ -171,18 +195,22 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
         conf.setSampleChromosome(returnVal);
         
         population = Genotype.randomInitialGenotype(conf);
-        int generation = 0;
         mBest = 0;
-        while(true) {
-            startOcr();
+        int success_runs = 0;
+
+        startOcr();
+        
+        while(success_runs < 2) {
             mCurrentChrome = 0;
-            Log.d(TAG, String.format("start evolution: %d", generation));
+            Log.d(TAG, String.format("start evolution: %d", mGeneration));
             population.evolve();
-            mCurrentOcr.release();
             ((OcrFitnessFunction) myFunc).printBest();
-            Log.d(TAG, String.format("end evolution: %d", generation));
-            
+            Log.d(TAG, String.format("end evolution: %d", mGeneration));
+            if(mBest > 20401) {
+                success_runs += 1;
+            }
         }
+        mCurrentOcr.release();
         
     }
     
@@ -245,7 +273,7 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
             }
             
             Log.d(TAG, String.format("Fitness Result %d: %d -> %d", mCurrentChrome, mResult, mBest));
-            if(mResult > mBest) {
+            if(mResult > mBest || mDebug) {
                 Log.d("BestParams", String.format("Fitness Result %d: %d -> %d", mCurrentChrome, mResult, mBest));
                 for (int i = 0; i < geneDescriptions.size(); i++) {
                     Log.d("BestParams", String.format("%s: %s", geneDescriptions.get(i).name, 
@@ -271,14 +299,15 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
                 // get bitmap at current position
                 mLastQueued = mCurrentPosition;
     
-                //Log.d(TAG, String.format("image %d, %s", mCurrentPosition, mImageDir[mCurrentPosition].getName()));
+                if (mDebug) {
+                    Log.d(TAG, String.format("image %d, %s", mCurrentPosition, mImageDir[mCurrentPosition].getName()));
+                }
     
                 CompletionCallback displayText = new OcrCompleted();
                 mCurrentOcr.setCompletionCallback(displayText);
-                Job j = mCurrentOcr.enqueue(mImageDir[mCurrentPosition]);
+                mCurrentOcr.enqueue(mImageDir[mCurrentPosition]);
     
                 try {
-                    //Log.d(TAG, "waiting...");
                     mImageDir.wait();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -329,9 +358,16 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
                 int base = expected.length() * 100;
                 int temp = 0;
                 
+                if(mDebug) {
+                    Log.i(TAG, String.format("length: %d, found: %s", message.length(), message));
+                    Log.i(TAG, String.format("length: %d, expected: %s", expected.length(), expected));
+                }
+                
                 // we give no reward for finding nothing
                 if(message.length() > 0 || expected.length() == 0)
                     temp = Math.abs(distance) + Math.abs(message.length() - expected.length());
+
+                    Log.i(TAG, String.format("base: %d, temp: %d", base, temp));
                     mResult += base - temp;
                 if(base < temp) {
                     Log.e(TAG, String.format("base too low: %d", temp));
@@ -365,12 +401,13 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
             }
                 
         }
-    
+   
     }
 
     @Override
     protected Void doInBackground(Void... params) {
         // TODO Auto-generated method stub
+        Log.d(TAG, "background learning");
         try {
             doLearning();
         } catch (InvalidConfigurationException e) {
