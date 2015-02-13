@@ -220,7 +220,7 @@ public class ImagePagerActivity extends FragmentActivity {
 	            Log.e(TAG, String.format("what happened here? size: %d", imageArray.get(position).getSize()) );
 	        }
 	        
-            //return getThreshed(bm);
+	        //return getThreshed(bm);
 	        return bm;
 	    }
         
@@ -448,8 +448,8 @@ public class ImagePagerActivity extends FragmentActivity {
 		        if(mScale == -1)
 		            mScale = ImagePagerAdapter.getScale(position);
 		        mBitmap = ImagePagerAdapter.getImage(position, mScale);
-                mImageView.setImageBitmap(mBitmap, null, 1f, 8f);
-                mImageView.setDisplayType(DisplayType.NONE);
+		        mImageView.setImageBitmap(mBitmap, null, 1f, 8f);
+		        mImageView.setDisplayType(DisplayType.NONE);
                 
                 Log.v(TAG, String.format("image set %d", position));
                 Log.v(TAG, String.format("image dims %d,%d", mBitmap.getWidth(), mBitmap.getHeight()));
