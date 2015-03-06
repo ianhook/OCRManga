@@ -37,7 +37,10 @@ import com.googlecode.tesseract.android.TessBaseAPI;
 
 public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
     private static final String TAG = "com.ianhook.OcrGeneticDetection";
+    //whether the app should attempt learning
     public final static Boolean mDoGA = false;
+    //whether learning should evaluate final message text or just boxes
+    public final static Boolean textEval = true;
     
     private Context mContext;
     private int mCurrentPosition;
@@ -267,7 +270,6 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
             mFinished = -1;
             mCurrentPosition = 0;
             
-            //busy wait :(
             while(mNotDone) {
                 doOcr();
             }
@@ -321,81 +323,90 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
 
     private class OcrCompleted implements CompletionCallback {
     
+        private void messageEval(List<OcrResult>results, Scanner scanner) {
+
+            String NL = System.getProperty("line.separator");
+            StringBuilder text = new StringBuilder();
+            while (scanner.hasNextLine()){
+                text.append(scanner.nextLine() + NL);
+            }
+            
+            //  get the ocr results for an image
+            String message = "";
+            if(!results.isEmpty()) {
+                for(int i = 0; i < results.size(); i++)
+                    message += results.get(i).getString() + "\n";
+            }            
+            
+            String expected = text.toString();
+            int distance = StringUtils.getLevenshteinDistance(message, expected);
+            int base = expected.length() * 100;
+            int temp = 0;
+            
+            if(mDebug) {
+                Log.i(TAG, String.format("length: %d, found: %s", message.length(), message));
+                Log.i(TAG, String.format("length: %d, expected: %s", expected.length(), expected));
+            }
+            
+            // we give no reward for finding nothing
+            if(message.length() > 0 || expected.length() == 0)
+                temp = Math.abs(distance) + Math.abs(message.length() - expected.length());
+
+                Log.i(TAG, String.format("base: %d, temp: %d", base, temp));
+                mResult += base - temp;
+            if(base < temp) {
+                Log.e(TAG, String.format("base too low: %d", temp));
+            }
+
+            if(mDebug) {
+                Log.d(TAG, String.format("image %d, %s", mCurrentPosition, mImageDir[mCurrentPosition].getName()));
+                //Log.d(TAG, String.format("str %d, %s", mCurrentPosition, stringFile.getAbsolutePath()));
+                Log.d(TAG, "Message: " + message.replace("\n","\\n"));
+                Log.d(TAG, "Expected: " + expected.replace("\n", "\\n"));
+                Log.d(TAG, String.format("distance: %d, %d", temp, mResult));
+            }          
+        }
+        
+        private void boxEval(List<OcrResult> results, Scanner scanner) {
+
+            StringBuilder text = new StringBuilder();
+            while (scanner.hasNextLine()){
+                //text.append(scanner.nextLine() + NL);
+            }
+        }
+        
         @Override
         public void onCompleted(List<OcrResult> results) {
             //Log.d(TAG, "got some results");
 
             synchronized(mImageDir) {
-                //  get the ocr results for an image
-                String message = "";
-                if(!results.isEmpty()) {
-                    for(int i = 0; i < results.size(); i++)
-                        message += results.get(i).getString() + "\n";
-                }
-                
-                //  get the string distance from the actual string            
+                //  Expected values from file        
                 String encoding = "UTF-8";
-                StringBuilder text = new StringBuilder();
-                String NL = System.getProperty("line.separator");
-                Scanner scanner;
                 String imageName = mImageDir[mCurrentPosition].getName();
                 String textName = imageName.substring(0, imageName.length() - 4) + ".txt";
                 File stringFile = new File(Environment.getExternalStorageDirectory(), "test_data/test_strings/" + textName);
-                try {
-                    
-                    scanner = new Scanner(new FileInputStream(stringFile), encoding);
-                    while (scanner.hasNextLine()){
-                      text.append(scanner.nextLine() + NL);
+
+                Scanner scanner;
+                try {                    
+                    scanner  = new Scanner(new FileInputStream(stringFile), encoding);
+
+                    //score message
+                    if(textEval) {
+                        messageEval(results, scanner);
+                    } else {
+                        boxEval(results, scanner);
                     }
+                    
                     scanner.close();
                 } catch (FileNotFoundException e) {
                     // TODO Auto-generated catch block
                     e.printStackTrace();
-                }   
-                
-                String expected = text.toString();
-                int distance = StringUtils.getLevenshteinDistance(message, expected);
-                int base = expected.length() * 100;
-                int temp = 0;
-                
-                if(mDebug) {
-                    Log.i(TAG, String.format("length: %d, found: %s", message.length(), message));
-                    Log.i(TAG, String.format("length: %d, expected: %s", expected.length(), expected));
                 }
                 
-                // we give no reward for finding nothing
-                if(message.length() > 0 || expected.length() == 0)
-                    temp = Math.abs(distance) + Math.abs(message.length() - expected.length());
-
-                    Log.i(TAG, String.format("base: %d, temp: %d", base, temp));
-                    mResult += base - temp;
-                if(base < temp) {
-                    Log.e(TAG, String.format("base too low: %d", temp));
-                }
                 
-                /*
-                ArrayList<Integer> list = new ArrayList<Integer>();
-                list.add(331);
-                list.add(717);
-                list.add(1103);
-                list.add(1477);
-                list.add(1523);
-                list.add(1915);
-                list.add(2303);
-                */
-
-                if(mDebug) {
-                    Log.d(TAG, String.format("image %d, %s", mCurrentPosition, mImageDir[mCurrentPosition].getName()));
-                    //Log.d(TAG, String.format("str %d, %s", mCurrentPosition, stringFile.getAbsolutePath()));
-                    Log.d(TAG, "Message: " + message.replace("\n","\\n"));
-                    Log.d(TAG, "Expected: " + expected.replace("\n", "\\n"));
-                    Log.d(TAG, String.format("distance: %d, %d", temp, mResult));
-                }
-                
-                //score message
                 //repeat
                 mFinished += 1;
-                mCurrentPosition += 1;
+                mCurrentPosition += 1;  
                 mImageDir.notify();
                 //doOcr();
             }

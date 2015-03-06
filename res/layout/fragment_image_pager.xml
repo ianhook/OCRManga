@@ -14,12 +14,4 @@
         android:layout_width="fill_parent" 
         android:layout_height="fill_parent" 
         android:contentDescription="@string/imageview_description"/>
-    <LinearLayout
-        android:id="@+id/highlighter"
-        android:background="#50134BE8"
-        android:layout_width="100dp" 
-        android:layout_height="100dp" 
-    	android:orientation="horizontal"
-    	android:visibility="gone"
-        />
 </FrameLayout>

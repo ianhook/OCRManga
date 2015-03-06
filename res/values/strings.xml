@@ -7,6 +7,7 @@
     <string name="title_activity_display_message">OCR Results</string>
     <string name="bad_ocr">No OCR results found</string>
     <string name="action_search">Search</string>
+    <string name="action_highlight">Highlight Text</string>
     <string name="title_activity_file_browser">FileBrowserActivity</string>
     <string name="title_activity_cbrreader">CBRReaderActivity</string>
     <string name="dummy_button">Dummy Button</string>

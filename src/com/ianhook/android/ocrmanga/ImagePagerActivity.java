@@ -25,6 +25,7 @@ import com.ianhook.android.ocrmanga.R;
 import com.ianhook.android.ocrmanga.util.OcrGeneticDetection;
 
 import android.annotation.SuppressLint;
+import android.app.ActionBar;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
@@ -34,23 +35,29 @@ import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.Matrix;
 import android.graphics.RectF;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentStatePagerAdapter;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v4.view.ViewPager;
 import android.util.Log;
 import android.view.Display;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup.LayoutParams;
 import android.view.WindowManager;
 import android.view.View.OnClickListener;
 import android.view.View.OnLongClickListener;
 import android.view.View.OnTouchListener;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 
@@ -61,22 +68,32 @@ public class ImagePagerActivity extends FragmentActivity {
     public final static String TRANSLATION = "com.ianhook.android.ocrmanga.TRANSLATION";
     private final static String PAGE_NUM = "page";
 
-	public static final String TAG = "ImagePagerActivity";
+    public static final String TAG = "ImagePagerActivity";
     private ImagePagerAdapter mIPA;
     private ViewPager mViewPager;
     private static Ocr ocr;
-	
+    private ImageFragment mCurrentFragment;
+    private static FragmentManager mFragManager;
+    
     @Override
-	protected void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-		setContentView(R.layout.activity_image_pager);
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        
+        //hide the action bar (menu options at top) 
+        ActionBar actionBar = getActionBar();
+        actionBar.hide();
+        actionBar.setBackgroundDrawable(new ColorDrawable(Color.argb(128, 0, 0, 0)));
+        
+        setContentView(R.layout.activity_image_pager);
         
         Intent intent = getIntent();
         String file_name = intent.getStringExtra(FILE_NAME);
-		
-		mIPA = new ImagePagerAdapter(getSupportFragmentManager());
-		try {
-		    mIPA.setFile(file_name);
+        actionBar.setTitle(file_name);
+        
+        mFragManager = getSupportFragmentManager();
+        mIPA = new ImagePagerAdapter(mFragManager);
+        try {
+            mIPA.setFile(file_name);
             mIPA.setScreen(recordDisplaySize());
         } catch (IOException e) {
             Log.e(TAG, e.getMessage());
@@ -98,11 +115,63 @@ public class ImagePagerActivity extends FragmentActivity {
             params.setLanguage("jpn");
             params.setPageSegMode(TessBaseAPI.PageSegMode.PSM_SINGLE_BLOCK_VERT_TEXT);
             //params.setPageSegMode(TessBaseAPI.PageSegMode.PSM_AUTO);
+            //Fitness: 20304
+            params.setVariable("edge_tile_x", "30");
+            params.setVariable("edge_tile_y", "32");
+            params.setVariable("edge_thresh", "44");
+            params.setVariable("edge_avg_thresh", "4");
+            params.setVariable("single_min_aspect", "0.12387389438495032");
+            params.setVariable("single_mix_aspect", "7.140991507983401");
+            params.setVariable("single_min_area", "25");
+            params.setVariable("single_min_density", "0.2814948034673991");
+            params.setVariable("pair_h_ratio", "1.2320803151162179");
+            params.setVariable("pair_d_ratio", "1.6700535687077367");
+            params.setVariable("pair_h_dist_ratio", "1.2066236790559628");
+            params.setVariable("pair_v_dist_ratio", "1.0045547320629222");
+            params.setVariable("pair_h_shared", "0.14599912098744383");
+            params.setVariable("cluster_width_spacing", "3");
+            params.setVariable("cluster_shared_edge", "0.8526428970173985");
+            params.setVariable("cluster_h_ratio", "0.28984088586226053");
+            params.setVariable("cluster_min_blobs", "2");
+            params.setVariable("cluster_min_aspect", "1.78901587228034");
+            params.setVariable("cluster_min_fdr", "3.0215533597321147");
+            params.setVariable("cluster_min_edge", "35");
+            params.setVariable("cluster_min_edge_avg", "35");
+
             ocr.setParameters(params);
         }
         
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-	}
+    }
+    
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.image_pager, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+        if (id == R.id.action_settings) {
+            return true;
+        } else if (id == R.id.action_highlight) {
+            mCurrentFragment.findText();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+    
+    public void menuForFragment(ImageFragment v) {
+
+        getActionBar().show();
+        mCurrentFragment = v;
+        
+    }
     
     @Override
     protected void onStop(){
@@ -134,96 +203,97 @@ public class ImagePagerActivity extends FragmentActivity {
         }
         return screenSize;
     }
-	
-	public static class ImagePagerAdapter extends FragmentStatePagerAdapter {
-	    
-	    private static ZipFile mZipFile;
-	    private static int mCount;
-	    private static Point mScreenSize;
+    
+    public static class ImagePagerAdapter extends FragmentStatePagerAdapter {
+        
+        private static ZipFile mZipFile;
+        private static int mCount;
+        private static Point mScreenSize;
 
-		public ImagePagerAdapter(FragmentManager fm) {
-			super(fm);
-			// TODO Auto-generated constructor stub
-		}
-		
-		public void setScreen(Point point) {
-		    mScreenSize = point;
-		}
+        public ImagePagerAdapter(FragmentManager fm) {
+            super(fm);
+            // TODO Auto-generated constructor stub
+        }
+        
+        public void setScreen(Point point) {
+            mScreenSize = point;
+        }
 
-	    public void setFile(String file_name) throws ZipException, IOException {
-	        Log.v(TAG, "loading file " + file_name);
-	        setFile(new File(file_name));
-	        
-	    }
+        public void setFile(String file_name) throws ZipException, IOException {
+            Log.v(TAG, "loading file " + file_name);
+            setFile(new File(file_name));
+            
+        }
 
-	    public void setFile(File file) throws ZipException, IOException {
-	        mZipFile = new ZipFile(file);
-	        mCount = Collections.list(mZipFile.entries()).size();
-	        Log.v(TAG, String.format("%d images found", mCount));
-	    }
-	    
-	    public String getFileName() {
-	        File file = new File(mZipFile.getName());
-	        return file.getName();
-	    }
-	    
-		@Override
-		public Fragment getItem(int arg0) {
+        public void setFile(File file) throws ZipException, IOException {
+            mZipFile = new ZipFile(file);
+            mCount = Collections.list(mZipFile.entries()).size();
+            Log.v(TAG, String.format("%d images found", mCount));
+        }
+        
+        public String getFileName() {
+            File file = new File(mZipFile.getName());
+            return file.getName();
+        }
+        
+        @Override
+        public Fragment getItem(int arg0) {
             Log.v(TAG, String.format("setting image %d", arg0));
-		    
+            
             Fragment fragment = new ImageFragment();
             Bundle args = new Bundle();
             args.putInt(ImageFragment.ARG_OBJECT, getCount() - arg0);
             
             fragment.setArguments(args);
-			
-			// TODO Auto-generated method stub
-	        // Our object is just an integer :-P
-	        return fragment;
-		}
+            
+            // TODO Auto-generated method stub
+            // Our object is just an integer :-P
+            return fragment;
+        }
 
-		@Override
-		public int getCount() {
-			return mZipFile.size();
-		}
+        @Override
+        public int getCount() {
+            return mZipFile.size();
+        }
 
-	    @Override
-	    public CharSequence getPageTitle(int position) {
+        @Override
+        public CharSequence getPageTitle(int position) {
             ArrayList<? extends ZipEntry> imageArray = Collections.list(mZipFile.entries());
             
-	        return "file: " + imageArray.get(position).getName();
-	    }
-	    
+            return "file: " + imageArray.get(position).getName();
+        }
+        
         static private Bitmap getImage(int position, int scale) {
-	        InputStream zis;
-	        Bitmap bm = null;
-	        ArrayList<? extends ZipEntry> imageArray = Collections.list(mZipFile.entries());
+            InputStream zis;
+            Bitmap bm = null;
+            ArrayList<? extends ZipEntry> imageArray = Collections.list(mZipFile.entries());
 
-	        BitmapFactory.Options opts = new BitmapFactory.Options();
-	        opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
-	        
-	        try {	            
-	            if(imageArray.get(position).getSize() == 0)
-	                return null;
+            BitmapFactory.Options opts = new BitmapFactory.Options();
+            opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
+            
+            try {                
+                if(imageArray.get(position).getSize() == 0)
+                    return null;
                 Log.v(TAG, "file name is "+ imageArray.get(position).getName());
-	            zis = mZipFile.getInputStream(imageArray.get(position));
+                zis = mZipFile.getInputStream(imageArray.get(position));
 
                 BitmapFactory.Options options = new BitmapFactory.Options();
                 options.inSampleSize = scale;
                 bm = BitmapFactory.decodeStream(zis, null, options);
                 zis.close();
-	        } catch (IOException e) {
-	            Log.e(TAG, e.getMessage());
-	            e.printStackTrace();
-	        }
-	        if(bm == null) {
-	            Log.e(TAG, String.format("what happened here? size: %d", imageArray.get(position).getSize()) );
-	        }
-	        
-	        //return getThreshed(bm);
-	        return bm;
-	    }
+            } catch (IOException e) {
+                Log.e(TAG, e.getMessage());
+                e.printStackTrace();
+            }
+            if(bm == null) {
+                Log.e(TAG, String.format("what happened here? size: %d", imageArray.get(position).getSize()) );
+            }
+            
+            //return getThreshed(bm);
+            return bm;
+        }
         
+        @SuppressWarnings("unused")
         private static Bitmap getThreshed(Bitmap bm) {
             // this is the one that we actually use
             //return WriteFile.writeBitmap(Thresholder.edgeAdaptiveThreshold(ReadFile.readBitmap(bm)));
@@ -268,153 +338,118 @@ public class ImagePagerActivity extends FragmentActivity {
             }
             return scale;
         }
-	}
+    }
 
-	/**
-	 * A placeholder fragment containing a simple view.
-	 */
-	public static class ImageFragment extends Fragment { 
-		public static final String ARG_OBJECT = "int";
-		
-		private int position;
-		private ImageViewTouch mImageView;
-		private Bitmap mBitmap;
-		private Bitmap mResizedBitmap;
-		private int mScale = -1;
-		private View mRootView;
-		private float highlightX;
+    /**
+     * A placeholder fragment containing a simple view.
+     */
+    public static class ImageFragment extends Fragment { 
+        public static final String ARG_OBJECT = "int";
+        
+        private int position;
+        private ImageViewTouch mImageView;
+        private Bitmap mBitmap;
+        private Bitmap mResizedBitmap;
+        private int mScale = -1;
+        private View mRootView;
+        private float highlightX;
         private float highlightY;
+        
+        @SuppressWarnings("unused")
+        private Highlighter displayHighlight(Rect bounds) {
+            return displayHighlight(mImageView, bounds.left, bounds.top, 
+                    bounds.width(), bounds.height());
+        }
+        
+        @SuppressLint("NewApi")
+        private Highlighter displayHighlight(View v, int x, int y, int width, int height) {
+            //FrameLayout current = (FrameLayout) v.getParent();
+            
+            Highlighter newHighlight = new Highlighter(getActivity());
+            newHighlight.setLayoutParams(new LayoutParams(width, height));
+            newHighlight.setX(x * mImageView.getScale() * mImageView.getBaseScale() + v.getX());
+            newHighlight.setY(y * mImageView.getScale() * mImageView.getBaseScale()  + v.getY());
+            
+            return newHighlight;          
+            
+        }
+        
+        public void findText() {
+            CompletionCallback displayText = new DisplayText();
+            ocr.setCompletionCallback(displayText);
+            ocr.enqueue(mBitmap);
+        }
     
         private OnLongClickListener mLongClickListener = new OnLongClickListener() {
 
-            @SuppressLint("NewApi")
             @Override
             public boolean onLongClick(View v) {
                 Log.d(TAG, "Long Click caught");
-                View current = (View) v.getParent();
-                LinearLayout highlighter = (LinearLayout) current.findViewById(R.id.highlighter);
-                if( highlighter.getVisibility() == View.GONE) {
-                    highlighter.setVisibility(View.VISIBLE);
+
+                ImagePagerActivity IPA = (ImagePagerActivity) getActivity();
+                if(IPA.getActionBar().isShowing()) {
+                    IPA.getActionBar().hide();
                 } else {
-                    highlighter.setVisibility(View.GONE);
+                    IPA.menuForFragment(ImageFragment.this);
                 }
-                
-                int width = highlighter.getWidth() == 0 ? 300 : highlighter.getWidth();
-                int height = highlighter.getHeight() == 0 ? 300 : highlighter.getHeight();
-                
-                highlightX = (float) Math.max(0.0, highlightX - (float)width / 2.0); 
-                highlightY = (float) Math.max(0.0, highlightY - (float)height / 2.0);
-                
-                highlighter.setX(highlightX + v.getX());
-                highlighter.setY(highlightY + v.getY());
-                Log.d(TAG, String.format("x:%f, y:%f", highlightX, highlightY));
-                
+                    
                 return true;
             }   
         };
-        
+        /*
         private OnTouchListener mTouchListener = new OnTouchListener() {
 
             @Override
             public boolean onTouch(View v, MotionEvent e) {
-                View current = (View) v.getParent();
-                LinearLayout highlighter = (LinearLayout) current.findViewById(R.id.highlighter);
-            
-                if( highlighter.getVisibility() == View.GONE) {
-                    highlightX = e.getX();
-                    highlightY = e.getY();
-                    //highlightX = 456.438f + 150.0f;
-                    //highlightY = 166.572f + 150.0f;
-                }
-                Log.v(TAG, String.format("touch %f,%f", highlightX, highlightY));
+                if(e.getAction() == MotionEvent.ACTION_UP) {
+                    View current = (View) v.getParent();
+                    LinearLayout highlighter = (LinearLayout) current.findViewById(R.id.highlighter);
                 
+                    if( highlighter.getVisibility() == View.GONE) {
+                        highlightX = e.getX();
+                        highlightY = e.getY();
+                        //highlightX = 456.438f + 150.0f;
+                        //highlightY = 166.572f + 150.0f;
+                    }
+                    Log.v(TAG, String.format("touch %f,%f", highlightX, highlightY));
+                    v.performClick();
+                }
                 return false;
             }
-        };
         
-        private OnClickListener mHighlightClickListener = new OnClickListener() {
-            
-            @SuppressLint("NewApi")
-            @Override
-            public void onClick(View v) {
-                RectF outRect = new RectF();
-                Rect highlightRect = new Rect();
-                v.getHitRect(highlightRect);
-                RectF bitmapRect = mImageView.getBitmapRect();
-                Log.v(TAG, bitmapRect.toString());
-                
-                RectF highlightRectF = new RectF(highlightX,
-                        highlightY,
-                        highlightRect.width() + highlightX,
-                        highlightRect.height() + highlightY
-                        );                
-           
-                Matrix dmat = mImageView.getImageViewMatrix();
-                
-                Log.v(TAG, String.format("dmat %s", dmat.toString()));
-
-                dmat.invert(dmat);
-                dmat.mapRect(outRect, highlightRectF);
-                outRect.left = (float) Math.max(0.0, outRect.left);
-                outRect.top = (float) Math.max(0.0, outRect.top);
-                
-                outRect.bottom = (float) Math.min(mBitmap.getHeight(), outRect.bottom);
-                outRect.right = (float) Math.min(mBitmap.getWidth(), outRect.right);
-
-                Log.v(TAG, String.format("highlight %d,%d, %d,%d", (int)highlightRect.left,
-                        (int)highlightRect.top,
-                        (int)highlightRect.width(),
-                        (int)highlightRect.height()));
-                Log.v(TAG, String.format("outRect %f,%f, %f,%f", outRect.left, 
-                        outRect.top,
-                        outRect.width(), outRect.height()));
-
-                Log.v(TAG, String.format("imageView %d,%d,%d,%d", mImageView.getLeft(), 
-                        mImageView.getTop(), mImageView.getWidth(), mImageView.getHeight()));
-                Log.v(TAG, String.format("bitmap %d,%d", mBitmap.getWidth(), mBitmap.getHeight()));
-
-                mResizedBitmap = Bitmap.createBitmap(mBitmap, 
-                        (int)outRect.left,
-                        (int)outRect.top, 
-                        (int)outRect.width(), 
-                        (int)outRect.height());
-
-                mImageView.setImageBitmap(mResizedBitmap, null, 1f, 8f);
-                
-                if(ocr != null) {
-                    CompletionCallback displayText = new DisplayText();
-                    ocr.setCompletionCallback(displayText);
-                    ocr.enqueue(mResizedBitmap);
-                }
-                
-                View current = (View) v.getParent();
-                LinearLayout highlighter = (LinearLayout) current.findViewById(R.id.highlighter);
-                highlighter.setVisibility(View.GONE);
-                
-            }
-        };
-        
+        };*/
         private class DisplayText implements CompletionCallback {
         
             @Override
-            public void onCompleted(List<OcrResult> results) {
+            public void onCompleted(List<OcrResult> results) {                
                 
-                String message = "";
-                Intent intent = new Intent(ImageFragment.this.getActivity(), DisplayMessageActivity.class);
+                //String message = "";
+                //Intent intent = new Intent(ImageFragment.this.getActivity(), DisplayMessageActivity.class);
                 Log.d("DisplayText", "got some results");
                 if(results.isEmpty()) {
-                    message = "I was afraid of this.";
+                    //message = "I was afraid of this.";
                 } else {
+
+                    //FragmentTransaction ft = getChildFragmentManager().beginTransaction();
                     for(int i = 0; i < results.size(); i++) {
-                        message += results.get(i).getString() + "\n";
+                        //message += results.get(i).getString() + "\n";
+                        if(results.get(i).getBounds().top == 0) {
+                            continue;
+                        }
+
+                        displayHighlight(results.get(i).getBounds());
+                        //ft.add(mRootView.getId(), displayHighlight(results.get(i).getBounds()), String.format("h%d", i));
                         Log.d("DisplayText", results.get(i).getBounds().flattenToString());
+                        Log.d("DisplayText", results.get(i).getString());
+
                     }
+                    //ft.commit();           
                 }
-                intent.putExtra(ImagePagerActivity.EXTRA_MESSAGE, message);
-                intent.putExtra(ImagePagerActivity.FILE_NAME, "");
-                intent.putExtra(ImagePagerActivity.BITMAP, mResizedBitmap);
+                //intent.putExtra(ImagePagerActivity.EXTRA_MESSAGE, message);
+                //intent.putExtra(ImagePagerActivity.FILE_NAME, "");
+                //intent.putExtra(ImagePagerActivity.BITMAP, mResizedBitmap);
         
-                startActivity(intent);
+                //startActivity(intent);
                 
             }
             
@@ -423,42 +458,43 @@ public class ImagePagerActivity extends FragmentActivity {
         public ImageFragment() {
         }
         
-		@Override
-		public View onCreateView(LayoutInflater inflater, ViewGroup container,
-				Bundle savedInstanceState) {
-			mRootView = inflater.inflate(R.layout.fragment_image_pager,
-					container, false);
-			
-			Bundle args = getArguments();
-			position = args.getInt(ARG_OBJECT);
-			
-			mImageView = (ImageViewTouch) mRootView.findViewById(R.id.imageView);
-            mImageView.setOnLongClickListener(mLongClickListener);
-            mImageView.setOnTouchListener(mTouchListener);
+        @Override
+        public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                Bundle savedInstanceState) {
+            mRootView = inflater.inflate(R.layout.fragment_image_pager,
+                    container, false);
             
-            LinearLayout highlighter = (LinearLayout) mRootView.findViewById(R.id.highlighter);
-            highlighter.setOnClickListener(mHighlightClickListener);
-			
-			return mRootView;
-		}
-		
-		private void drawImage() {
+            Bundle args = getArguments();
+            position = args.getInt(ARG_OBJECT);
+            
+            mImageView = (ImageViewTouch) mRootView.findViewById(R.id.imageView);
+            mImageView.setOnLongClickListener(mLongClickListener);
+            //mImageView.setOnTouchListener(mTouchListener);
+            
+            return mRootView;
+        }
+        
+        private void drawImage() {
 
-		    if(mBitmap == null || mBitmap.isRecycled()) {
-		        if(mScale == -1)
-		            mScale = ImagePagerAdapter.getScale(position);
-		        mBitmap = ImagePagerAdapter.getImage(position, mScale);
-		        mImageView.setImageBitmap(mBitmap, null, 1f, 8f);
-		        mImageView.setDisplayType(DisplayType.NONE);
+            if(mBitmap == null || mBitmap.isRecycled()) {
+                if(mScale == -1)
+                    mScale = ImagePagerAdapter.getScale(position);
+                mBitmap = ImagePagerAdapter.getImage(position, mScale);
+                mImageView.setImageBitmap(mBitmap, null, 1f, 8f);
+                //TODO fix initial image display
+                //works with smaller images
+                //mImageView.setDisplayType(DisplayType.NONE);
+                //work with larger images
+                mImageView.setDisplayType(DisplayType.FIT_TO_SCREEN);
                 
                 Log.v(TAG, String.format("image set %d", position));
                 Log.v(TAG, String.format("image dims %d,%d", mBitmap.getWidth(), mBitmap.getHeight()));
                 
-		    }
-		    ProgressBar progress = (ProgressBar) getActivity().findViewById(R.id.progress);
+            }
+            ProgressBar progress = (ProgressBar) getActivity().findViewById(R.id.progress);
             progress.setVisibility(View.GONE);
-		}
-		
+        }
+        
         private void deleteImage() {
 
             if(mBitmap != null && !mBitmap.isRecycled()) {
@@ -468,13 +504,13 @@ public class ImagePagerActivity extends FragmentActivity {
             }
         }
 
-	    @Override
-	    public void onActivityCreated(Bundle savedInstanceState) {
-	        super.onActivityCreated(savedInstanceState);
-	        
-	        Log.v(TAG, String.format("act create %d", position));
-	    }
-	    
+        @Override
+        public void onActivityCreated(Bundle savedInstanceState) {
+            super.onActivityCreated(savedInstanceState);
+            
+            Log.v(TAG, String.format("act create %d", position));
+        }
+        
         @Override
         public void onStart() {
             super.onStart();
@@ -493,7 +529,8 @@ public class ImagePagerActivity extends FragmentActivity {
         @Override
         public void onPause() {
             super.onPause();
-            
+
+            getActivity().getActionBar().hide();
             Log.v(TAG, String.format("pause %d", position));
             deleteImage();
         }
@@ -505,5 +542,5 @@ public class ImagePagerActivity extends FragmentActivity {
             Log.v(TAG, String.format("stop %d", position));
             deleteImage();
         }
-	}
+    }
 }
