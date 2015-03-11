@@ -1,0 +1,19 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.ianhook.android.ocrmanga.ImagePagerActivity" >
+
+    <item
+        android:id="@+id/action_highlight"
+        android:orderInCategory="100"
+        android:title="@string/action_highlight"
+        app:showAsAction="never"/>
+    
+    <item
+        android:id="@+id/action_settings"
+        android:orderInCategory="100"
+        android:title="@string/action_settings"
+        app:showAsAction="never"/>
+
+</menu>
+<!-- From: file:/home/ian/AndroidstudioProjects/OCRManga/oCRManga/src/main/res/menu/image_pager.xml -->

@@ -10,3 +10,10 @@ obj/
 patches/
 target/
 src/test/resources/META-INF/config.properties
+.gradle
+/local.properties
+/.idea/workspace.xml
+/.idea/libraries
+.DS_Store
+/build
+import-summary.txt
