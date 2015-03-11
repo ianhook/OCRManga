@@ -16,4 +16,9 @@ src/test/resources/META-INF/config.properties
 /.idea/libraries
 .DS_Store
 /build
+*/build/
 import-summary.txt
+*.dex
+*.class
+*.apk
+*.ap_

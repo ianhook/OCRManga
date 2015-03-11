@@ -110,8 +110,10 @@ public class OcrService extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
-        if (Intents.Service.ACTION.equals(intent.getAction())) {
+        Log.d(TAG, String.format("binding %s %s", Intents.Service.ACTION, intent.getAction()));
+        /*if (Intents.Service.ACTION.equals(intent.getAction())) {
             for (String category : intent.getCategories()) {
+                Log.d(TAG, String.format("binding %s %s", Intents.Service.CATEGORY, category));
                 if (Intents.Service.CATEGORY.equals(category)) {
                     return mBinder;
                 }
@@ -119,6 +121,8 @@ public class OcrService extends Service {
         }
 
         return null;
+        */
+        return mBinder;
     }
 
     /**

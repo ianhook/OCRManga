@@ -43,6 +43,7 @@ import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.Set;
 
+import com.googlecode.eyesfree.ocr.service.OcrService;
 import com.googlecode.tesseract.android.TessBaseAPI;
 
 /**
@@ -246,7 +247,7 @@ public class Ocr {
         }
 
         if (mIOcr == null) {
-            Log.d(TAG, "asdf");
+            Log.d(TAG, "Service is null?!?");
         }
 
         try {
@@ -481,14 +482,15 @@ public class Ocr {
             }
         };
 
-        Intent intent = new Intent(Intents.Service.ACTION);
-        intent.addCategory(Intent.CATEGORY_DEFAULT);
-
         // Binding will fail only if the Ocr doesn't exist;
         // the OcrVersionAlert will give users a chance to install
         // the needed Ocr.
 
         Context context = mContext.get();
+
+        //Intent intent = new Intent(Intents.Service.ACTION);
+        Intent intent = new Intent(context, OcrService.class);//.setClassName(OcrService.class.getPackage().getName(), OcrService.class.getName());
+        //intent.addCategory(Intent.CATEGORY_DEFAULT);
 
         if (!context.bindService(intent, mServiceConnection, Context.BIND_AUTO_CREATE)) {
             Log.e(TAG, "Cannot bind to OCR service, assuming not installed");
