@@ -350,25 +350,22 @@ public class ImagePagerActivity extends FragmentActivity {
         private int position;
         private ImageViewTouch mImageView;
         private Bitmap mBitmap;
-        private Bitmap mResizedBitmap;
         private int mScale = -1;
         private View mRootView;
-        private float highlightX;
-        private float highlightY;
         
         @SuppressWarnings("unused")
-        private View displayHighlight(Rect bounds) {
+        private Highlighter displayHighlight(Rect bounds) {
             return displayHighlight(mImageView, bounds.left, bounds.top, 
                     bounds.width(), bounds.height());
         }
         
         @SuppressLint("NewApi")
-        private View displayHighlight(View v, int x, int y, int width, int height) {
+        private Highlighter displayHighlight(View v, int x, int y, int width, int height) {
             //FrameLayout current = (FrameLayout) v.getParent();
             
             LayoutInflater vi = (LayoutInflater) getActivity().getApplicationContext().
                     getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-            View newHighlight = vi.inflate(R.layout.fragment_highlighter, null);
+            Highlighter newHighlight = (Highlighter) vi.inflate(R.layout.fragment_highlighter, null);
                     RectF temp = new RectF(x,y,x+width,y+height);
             mImageView.getImageViewMatrix().mapRect(temp);
 
@@ -376,14 +373,64 @@ public class ImagePagerActivity extends FragmentActivity {
             newHighlight.setX(temp.left);
             newHighlight.setY(temp.top);
 
+            newHighlight.setImagePage(this);
+
             ((ViewGroup) v.getParent()).addView(newHighlight);
             return newHighlight;          
             
         }
+
+        public Bitmap getBitmapSection(Rect bounds){
+
+            RectF outRect = new RectF();
+
+            RectF bitmapRect = mImageView.getBitmapRect();
+            Log.v(TAG, bitmapRect.toString());
+
+            RectF highlightRectF = new RectF(bounds);
+
+            Matrix dmat = mImageView.getImageViewMatrix();
+
+            Log.v(TAG, String.format("dmat %s", dmat.toString()));
+
+            dmat.invert(dmat);
+            dmat.mapRect(outRect, highlightRectF);
+            outRect.left = (float) Math.max(0.0, outRect.left);
+            outRect.top = (float) Math.max(0.0, outRect.top);
+
+            outRect.bottom = (float) Math.min(mBitmap.getHeight(), outRect.bottom);
+            outRect.right = (float) Math.min(mBitmap.getWidth(), outRect.right);
+
+            Log.v(TAG, String.format("highlight %d,%d, %d,%d", (int)bounds.left,
+                    (int)bounds.top,
+                    (int)bounds.width(),
+                    (int)bounds.height()));
+            Log.v(TAG, String.format("outRect %f,%f, %f,%f", outRect.left,
+                    outRect.top,
+                    outRect.width(), outRect.height()));
+
+            Log.v(TAG, String.format("imageView %d,%d,%d,%d", mImageView.getLeft(),
+                    mImageView.getTop(), mImageView.getWidth(), mImageView.getHeight()));
+            Log.v(TAG, String.format("bitmap %d,%d", mBitmap.getWidth(), mBitmap.getHeight()));
+
+            Bitmap resizedBitmap = Bitmap.createBitmap(mBitmap,
+                    (int)outRect.left,
+                    (int)outRect.top,
+                    (int)outRect.width(),
+                    (int)outRect.height());
+
+            //mImageView.setImageBitmap(mResizedBitmap, null, 1f, 8f);
+            return resizedBitmap;
+
+        }
+
+        public Ocr getOcr() {
+            return ocr;
+        }
         
         public void findText() {
-            CompletionCallback displayText = new DisplayText();
-            ocr.setCompletionCallback(displayText);
+            CompletionCallback displayHighlightCB = new DisplayHighlightCB();
+            ocr.setCompletionCallback(displayHighlightCB);
             ocr.enqueue(mBitmap);
         }
     
@@ -423,16 +470,16 @@ public class ImagePagerActivity extends FragmentActivity {
                 }
                 return false;
             }
-        
         };*/
-        private class DisplayText implements CompletionCallback {
+
+        private class DisplayHighlightCB implements CompletionCallback {
         
             @Override
             public void onCompleted(List<OcrResult> results) {                
                 
                 //String message = "";
                 //Intent intent = new Intent(ImageFragment.this.getActivity(), DisplayMessageActivity.class);
-                Log.d("DisplayText", "got some results");
+                Log.d("DisplayHighlightCB", "got some results");
                 if(results.isEmpty()) {
                     //message = "I was afraid of this.";
                 } else {
@@ -446,8 +493,8 @@ public class ImagePagerActivity extends FragmentActivity {
 
                         displayHighlight(results.get(i).getBounds());
                         //ft.add(mRootView.getId(), displayHighlight(results.get(i).getBounds()), String.format("h%d", i));
-                        Log.d("DisplayText", results.get(i).getBounds().flattenToString());
-                        Log.d("DisplayText", results.get(i).getString());
+                        Log.d("DisplayHighlightCB", results.get(i).getBounds().flattenToString());
+                        Log.d("DisplayHighlightCB", results.get(i).getString());
 
                     }
                     //ft.commit();           
