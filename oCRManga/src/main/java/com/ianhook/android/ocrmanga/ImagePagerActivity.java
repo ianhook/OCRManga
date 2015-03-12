@@ -26,6 +26,7 @@ import com.ianhook.android.ocrmanga.util.OcrGeneticDetection;
 
 import android.annotation.SuppressLint;
 import android.app.ActionBar;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
@@ -356,20 +357,26 @@ public class ImagePagerActivity extends FragmentActivity {
         private float highlightY;
         
         @SuppressWarnings("unused")
-        private Highlighter displayHighlight(Rect bounds) {
+        private View displayHighlight(Rect bounds) {
             return displayHighlight(mImageView, bounds.left, bounds.top, 
                     bounds.width(), bounds.height());
         }
         
         @SuppressLint("NewApi")
-        private Highlighter displayHighlight(View v, int x, int y, int width, int height) {
+        private View displayHighlight(View v, int x, int y, int width, int height) {
             //FrameLayout current = (FrameLayout) v.getParent();
             
-            Highlighter newHighlight = new Highlighter(getActivity());
-            newHighlight.setLayoutParams(new LayoutParams(width, height));
-            newHighlight.setX(x * mImageView.getScale() * mImageView.getBaseScale() + v.getX());
-            newHighlight.setY(y * mImageView.getScale() * mImageView.getBaseScale()  + v.getY());
-            
+            LayoutInflater vi = (LayoutInflater) getActivity().getApplicationContext().
+                    getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+            View newHighlight = vi.inflate(R.layout.fragment_highlighter, null);
+                    RectF temp = new RectF(x,y,x+width,y+height);
+            mImageView.getImageViewMatrix().mapRect(temp);
+
+            newHighlight.setLayoutParams(new LayoutParams((int) temp.width(), (int) temp.height()));
+            newHighlight.setX(temp.left);
+            newHighlight.setY(temp.top);
+
+            ((ViewGroup) v.getParent()).addView(newHighlight);
             return newHighlight;          
             
         }

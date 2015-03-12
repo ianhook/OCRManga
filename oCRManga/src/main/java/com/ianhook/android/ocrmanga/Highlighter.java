@@ -15,10 +15,11 @@ import android.view.View.OnClickListener;
 import android.widget.LinearLayout;
 import android.widget.LinearLayout.LayoutParams;
 
-public class Highlighter extends LinearLayout {
+public class Highlighter extends LinearLayout implements OnClickListener {
     public Highlighter(Context context) {
         super(context);
         // TODO Auto-generated constructor stub
+        setOnClickListener(this);
     }
 
     public static final String TAG = "Highlighter";
@@ -101,70 +102,65 @@ public class Highlighter extends LinearLayout {
         mRootView.setBackground(new ColorDrawable(Color.parseColor(BACKGROUND_COLOR)));
     }
 
-    private OnClickListener mHighlightClickListener = new OnClickListener() {
-        
-        @SuppressLint("NewApi")
-        @Override
-        public void onClick(View v) {
-            Log.d(TAG, "got click");
-            /*
-            RectF outRect = new RectF();
-            Rect highlightRect = new Rect();
-            v.getHitRect(highlightRect);
-            */
-            /*
-            RectF bitmapRect = mImageView.getBitmapRect();
-            Log.v(TAG, bitmapRect.toString());
-            
-            RectF highlightRectF = new RectF(highlightX,
-                    highlightY,
-                    highlightRect.width() + highlightX,
-                    highlightRect.height() + highlightY
-                    );                
-       
-            Matrix dmat = mImageView.getImageViewMatrix();
-            
-            Log.v(TAG, String.format("dmat %s", dmat.toString()));
+    public void onClick(View v) {
+        Log.d(TAG, "got click");
+        /*
+        RectF outRect = new RectF();
+        Rect highlightRect = new Rect();
+        v.getHitRect(highlightRect);
+        */
+        /*
+        RectF bitmapRect = mImageView.getBitmapRect();
+        Log.v(TAG, bitmapRect.toString());
 
-            dmat.invert(dmat);
-            dmat.mapRect(outRect, highlightRectF);
-            outRect.left = (float) Math.max(0.0, outRect.left);
-            outRect.top = (float) Math.max(0.0, outRect.top);
-            
-            outRect.bottom = (float) Math.min(mBitmap.getHeight(), outRect.bottom);
-            outRect.right = (float) Math.min(mBitmap.getWidth(), outRect.right);
+        RectF highlightRectF = new RectF(highlightX,
+                highlightY,
+                highlightRect.width() + highlightX,
+                highlightRect.height() + highlightY
+                );
 
-            Log.v(TAG, String.format("highlight %d,%d, %d,%d", (int)highlightRect.left,
-                    (int)highlightRect.top,
-                    (int)highlightRect.width(),
-                    (int)highlightRect.height()));
-            Log.v(TAG, String.format("outRect %f,%f, %f,%f", outRect.left, 
-                    outRect.top,
-                    outRect.width(), outRect.height()));
+        Matrix dmat = mImageView.getImageViewMatrix();
 
-            Log.v(TAG, String.format("imageView %d,%d,%d,%d", mImageView.getLeft(), 
-                    mImageView.getTop(), mImageView.getWidth(), mImageView.getHeight()));
-            Log.v(TAG, String.format("bitmap %d,%d", mBitmap.getWidth(), mBitmap.getHeight()));
+        Log.v(TAG, String.format("dmat %s", dmat.toString()));
 
-            mResizedBitmap = Bitmap.createBitmap(mBitmap, 
-                    (int)outRect.left,
-                    (int)outRect.top, 
-                    (int)outRect.width(), 
-                    (int)outRect.height());
+        dmat.invert(dmat);
+        dmat.mapRect(outRect, highlightRectF);
+        outRect.left = (float) Math.max(0.0, outRect.left);
+        outRect.top = (float) Math.max(0.0, outRect.top);
 
-            mImageView.setImageBitmap(mResizedBitmap, null, 1f, 8f);
-            
-            if(ocr != null) {
-                CompletionCallback displayText = new DisplayText();
-                ocr.setCompletionCallback(displayText);
-                ocr.enqueue(mResizedBitmap);
-            }
-            
-            View current = (View) v.getParent();
-            LinearLayout highlighter = (LinearLayout) current.findViewById(R.id.highlighter);
-            highlighter.setVisibility(View.GONE);
-            */
+        outRect.bottom = (float) Math.min(mBitmap.getHeight(), outRect.bottom);
+        outRect.right = (float) Math.min(mBitmap.getWidth(), outRect.right);
+
+        Log.v(TAG, String.format("highlight %d,%d, %d,%d", (int)highlightRect.left,
+                (int)highlightRect.top,
+                (int)highlightRect.width(),
+                (int)highlightRect.height()));
+        Log.v(TAG, String.format("outRect %f,%f, %f,%f", outRect.left,
+                outRect.top,
+                outRect.width(), outRect.height()));
+
+        Log.v(TAG, String.format("imageView %d,%d,%d,%d", mImageView.getLeft(),
+                mImageView.getTop(), mImageView.getWidth(), mImageView.getHeight()));
+        Log.v(TAG, String.format("bitmap %d,%d", mBitmap.getWidth(), mBitmap.getHeight()));
+
+        mResizedBitmap = Bitmap.createBitmap(mBitmap,
+                (int)outRect.left,
+                (int)outRect.top,
+                (int)outRect.width(),
+                (int)outRect.height());
+
+        mImageView.setImageBitmap(mResizedBitmap, null, 1f, 8f);
+
+        if(ocr != null) {
+            CompletionCallback displayText = new DisplayText();
+            ocr.setCompletionCallback(displayText);
+            ocr.enqueue(mResizedBitmap);
         }
-    };
-    
+
+        View current = (View) v.getParent();
+        LinearLayout highlighter = (LinearLayout) current.findViewById(R.id.highlighter);
+        highlighter.setVisibility(View.GONE);
+        */
+    }
+
 }
