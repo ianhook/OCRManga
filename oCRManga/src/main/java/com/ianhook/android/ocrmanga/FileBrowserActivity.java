@@ -3,8 +3,8 @@ package com.ianhook.android.ocrmanga;
 import java.io.File;
 import java.util.Arrays;
 
-import com.ianhook.android.ocrmanga.R;
 import com.ianhook.android.ocrmanga.util.OcrGeneticDetection;
+import com.ianhook.android.ocrmanga.util.OcrStringTest;
 
 import android.support.v7.app.ActionBarActivity;
 import android.content.Context;
@@ -135,7 +135,7 @@ public class FileBrowserActivity extends ActionBarActivity {
         setTitle(directory.getPath());
         
         if(temp_file.isFile()) {
-            openManga(temp_file);
+        //    openManga(temp_file);
         }
 	}
     
@@ -166,6 +166,7 @@ public class FileBrowserActivity extends ActionBarActivity {
 	        if(OcrGeneticDetection.mDoGA) {
 	            Log.d(TAG, "Evole OCR");
 	            final OcrGeneticDetection OGD = new OcrGeneticDetection(getBaseContext());
+                OGD.setTest(new OcrStringTest());
 	            
 	            //OGD.startOcr(ocrInit);	            
 	            OGD.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);

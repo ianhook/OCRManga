@@ -1,14 +1,8 @@
 package com.ianhook.android.ocrmanga.util;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
-
-import org.apache.commons.lang3.StringUtils;
 
 import org.jgap.Chromosome;
 import org.jgap.Configuration;
@@ -24,11 +18,9 @@ import org.jgap.impl.IntegerGene;
 
 import android.content.Context;
 import android.os.AsyncTask;
-import android.os.Environment;
 import android.util.Log;
 import com.googlecode.eyesfree.ocr.client.Ocr;
 import com.googlecode.eyesfree.ocr.client.Ocr.InitCallback;
-import com.googlecode.eyesfree.ocr.client.Ocr.Job;
 import com.googlecode.eyesfree.ocr.client.OcrResult;
 import com.googlecode.eyesfree.ocr.client.Ocr.CompletionCallback;
 import com.googlecode.eyesfree.textdetect.HydrogenTextDetector;
@@ -36,20 +28,18 @@ import com.googlecode.eyesfree.textdetect.HydrogenTextDetector.Parameters;
 import com.googlecode.tesseract.android.TessBaseAPI;
 
 public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
-    private static final String TAG = "com.ianhook.OcrGeneticDetection";
+    private static final String TAG = "com.ianhook.OcrGD";
     //whether the app should attempt learning
     public final static Boolean mDoGA = false;
     //whether learning should evaluate final message text or just boxes
     public final static Boolean textEval = true;
     
     private Context mContext;
-    private int mCurrentPosition;
     private int mLastQueued;
     private int mFinished;
     private Ocr mCurrentOcr;
     private Boolean mNotDone;
     private int mResult;
-    private File[] mImageDir;
     private Genotype population;
     private boolean mDebug = false;
     private int mCurrentChrome;
@@ -57,6 +47,7 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
     private int mGeneration;
     private Object mServiceLock;
     private FitnessFunction myFunc;
+    private OcrStringTest mOcrTest;
     
     public class GeneDescriptor {
         public String name;
@@ -84,12 +75,16 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
             return gene;
         }
     }
+
+    public void setTest(OcrStringTest ot) {
+        mOcrTest = ot;
+        mOcrTest.mDebug = true;
+    }
     
     private List<GeneDescriptor> geneDescriptions = new ArrayList<GeneDescriptor>();
     
     public OcrGeneticDetection(Context context){
         mContext = context;
-        mCurrentPosition = 0;
         mGeneration = 0;
         mServiceLock = new Object();
         
@@ -179,9 +174,8 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
     
     public void doLearning() throws InvalidConfigurationException {
 
-        File temp_f = new File(Environment.getExternalStorageDirectory(), "test_data");
-       
-        mImageDir = (new File(temp_f, "test_images")).listFiles();
+        //File temp_f = new File(Environment.getExternalStorageDirectory(), "test_data");
+        //mImageDir = (new File(temp_f, "test_images")).listFiles();
         
         Gene[] sampleGenes = new Gene[ geneDescriptions.size() ];
         Configuration conf = new DefaultConfiguration();
@@ -271,7 +265,7 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
             mResult = 0;
             mLastQueued = -1;
             mFinished = -1;
-            mCurrentPosition = 0;
+            mOcrTest.resetPosition();
             
             while(mNotDone) {
                 doOcr();
@@ -296,25 +290,25 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
     
     public void doOcr(){
 
-        synchronized(mImageDir) {
+        synchronized(mOcrTest) {
             //Log.d(TAG, String.format("looping %d, %d, %d", mCurrentPosition, mLastQueued, mFinished));
             //for each image string pair
-            if(mLastQueued != mCurrentPosition 
-                    && mCurrentPosition < mImageDir.length) {
+            if(mOcrTest.canContinue(mLastQueued)) {
                 // get bitmap at current position
-                mLastQueued = mCurrentPosition;
+                mLastQueued = mOcrTest.getPosition();
     
                 if (mDebug) {
-                    Log.d(TAG, String.format("image %d, %s", mCurrentPosition, mImageDir[mCurrentPosition].getName()));
+                    Log.d(TAG, String.format("image %d, %s", mLastQueued, mOcrTest.getCurrentName()));
                 }
     
                 CompletionCallback displayText = new OcrCompleted();
                 mCurrentOcr.setCompletionCallback(displayText);
-                mCurrentOcr.enqueue(mImageDir[mCurrentPosition]);
+                mCurrentOcr.enqueue(mOcrTest.getImage());
     
                 try {
-                    mImageDir.wait();
+                    mOcrTest.wait();
                 } catch (InterruptedException e) {
+                    Log.d(TAG, "wait error");
                     e.printStackTrace();
                 }
             } else if(mFinished == mLastQueued) {
@@ -325,92 +319,20 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
     }
 
     private class OcrCompleted implements CompletionCallback {
-    
-        private void messageEval(List<OcrResult>results, Scanner scanner) {
 
-            String NL = System.getProperty("line.separator");
-            StringBuilder text = new StringBuilder();
-            while (scanner.hasNextLine()){
-                text.append(scanner.nextLine() + NL);
-            }
-            
-            //  get the ocr results for an image
-            String message = "";
-            if(!results.isEmpty()) {
-                for(int i = 0; i < results.size(); i++)
-                    message += results.get(i).getString() + "\n";
-            }            
-            
-            String expected = text.toString();
-            int distance = StringUtils.getLevenshteinDistance(message, expected);
-            int base = expected.length() * 100;
-            int temp = 0;
-            
-            if(mDebug) {
-                Log.i(TAG, String.format("length: %d, found: %s", message.length(), message));
-                Log.i(TAG, String.format("length: %d, expected: %s", expected.length(), expected));
-            }
-            
-            // we give no reward for finding nothing
-            if(message.length() > 0 || expected.length() == 0)
-                temp = Math.abs(distance) + Math.abs(message.length() - expected.length());
-
-                Log.i(TAG, String.format("base: %d, temp: %d", base, temp));
-                mResult += base - temp;
-            if(base < temp) {
-                Log.e(TAG, String.format("base too low: %d", temp));
-            }
-
-            if(mDebug) {
-                Log.d(TAG, String.format("image %d, %s", mCurrentPosition, mImageDir[mCurrentPosition].getName()));
-                //Log.d(TAG, String.format("str %d, %s", mCurrentPosition, stringFile.getAbsolutePath()));
-                Log.d(TAG, "Message: " + message.replace("\n","\\n"));
-                Log.d(TAG, "Expected: " + expected.replace("\n", "\\n"));
-                Log.d(TAG, String.format("distance: %d, %d", temp, mResult));
-            }          
-        }
-        
-        private void boxEval(List<OcrResult> results, Scanner scanner) {
-
-            StringBuilder text = new StringBuilder();
-            while (scanner.hasNextLine()){
-                //text.append(scanner.nextLine() + NL);
-            }
-        }
-        
         @Override
         public void onCompleted(List<OcrResult> results) {
-            //Log.d(TAG, "got some results");
+            Log.d(TAG, "got some results");
 
-            synchronized(mImageDir) {
-                //  Expected values from file        
-                String encoding = "UTF-8";
-                String imageName = mImageDir[mCurrentPosition].getName();
-                String textName = imageName.substring(0, imageName.length() - 4) + ".txt";
-                File stringFile = new File(Environment.getExternalStorageDirectory(), "test_data/test_strings/" + textName);
+            synchronized(mOcrTest) {
+                //score message
+                mResult += mOcrTest.evalResults(results);
 
-                Scanner scanner;
-                try {                    
-                    scanner  = new Scanner(new FileInputStream(stringFile), encoding);
-
-                    //score message
-                    if(textEval) {
-                        messageEval(results, scanner);
-                    } else {
-                        boxEval(results, scanner);
-                    }
-                    
-                    scanner.close();
-                } catch (FileNotFoundException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
-                
-                
                 //repeat
                 mFinished += 1;
-                mCurrentPosition += 1;  
-                mImageDir.notify();
+                mOcrTest.next();
+                //mCurrentPosition += 1;
+                mOcrTest.notify();
                 //doOcr();
             }
                 

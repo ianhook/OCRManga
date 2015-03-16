@@ -4,8 +4,10 @@ import it.sephiroth.android.library.imagezoom.ImageViewTouch;
 import it.sephiroth.android.library.imagezoom.ImageViewTouchBase.DisplayType;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -22,6 +24,8 @@ import com.googlecode.leptonica.android.ReadFile;
 import com.googlecode.leptonica.android.WriteFile;
 import com.googlecode.tesseract.android.TessBaseAPI;
 import com.ianhook.android.ocrmanga.R;
+import com.ianhook.android.ocrmanga.util.HydrogenGA;
+import com.ianhook.android.ocrmanga.util.MangaReader;
 import com.ianhook.android.ocrmanga.util.OcrGeneticDetection;
 
 import android.annotation.SuppressLint;
@@ -39,6 +43,7 @@ import android.graphics.RectF;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
@@ -84,18 +89,17 @@ public class ImagePagerActivity extends FragmentActivity {
         ActionBar actionBar = getActionBar();
         actionBar.hide();
         actionBar.setBackgroundDrawable(new ColorDrawable(Color.argb(128, 0, 0, 0)));
-        
+
         setContentView(R.layout.activity_image_pager);
         
         Intent intent = getIntent();
         String file_name = intent.getStringExtra(FILE_NAME);
-        actionBar.setTitle(file_name);
+        File f = new File(file_name);
+        actionBar.setTitle(f.getName());
         
         mFragManager = getSupportFragmentManager();
-        mIPA = new ImagePagerAdapter(mFragManager);
         try {
-            mIPA.setFile(file_name);
-            mIPA.setScreen(recordDisplaySize());
+            mIPA = new ImagePagerAdapter(mFragManager, file_name, recordDisplaySize());
         } catch (IOException e) {
             Log.e(TAG, e.getMessage());
             e.printStackTrace();
@@ -163,6 +167,8 @@ public class ImagePagerActivity extends FragmentActivity {
         } else if (id == R.id.action_highlight) {
             mCurrentFragment.findText();
             return true;
+        } else if (id == R.id.action_add_test) {
+            mCurrentFragment.saveTest();
         }
         return super.onOptionsItemSelected(item);
     }
@@ -206,14 +212,18 @@ public class ImagePagerActivity extends FragmentActivity {
     }
     
     public static class ImagePagerAdapter extends FragmentStatePagerAdapter {
-        
-        private static ZipFile mZipFile;
-        private static int mCount;
+
+        private static MangaReader mMangaReader;
         private static Point mScreenSize;
 
         public ImagePagerAdapter(FragmentManager fm) {
             super(fm);
-            // TODO Auto-generated constructor stub
+        }
+
+        public ImagePagerAdapter(FragmentManager fm, String file_name, Point screen_size) throws IOException {
+            super(fm);
+            setScreen(screen_size);
+            setFile(file_name);
         }
         
         public void setScreen(Point point) {
@@ -227,14 +237,11 @@ public class ImagePagerActivity extends FragmentActivity {
         }
 
         public void setFile(File file) throws ZipException, IOException {
-            mZipFile = new ZipFile(file);
-            mCount = Collections.list(mZipFile.entries()).size();
-            Log.v(TAG, String.format("%d images found", mCount));
+            mMangaReader = new MangaReader(file, mScreenSize);
         }
         
-        public String getFileName() {
-            File file = new File(mZipFile.getName());
-            return file.getName();
+        public static String getFileName() {
+            return mMangaReader.getFileName();
         }
         
         @Override
@@ -254,90 +261,16 @@ public class ImagePagerActivity extends FragmentActivity {
 
         @Override
         public int getCount() {
-            return mZipFile.size();
+            return mMangaReader.getCount();
         }
 
         @Override
         public CharSequence getPageTitle(int position) {
-            ArrayList<? extends ZipEntry> imageArray = Collections.list(mZipFile.entries());
-            
-            return "file: " + imageArray.get(position).getName();
+            return "file: " + mMangaReader.getImageName(position);
         }
         
-        static private Bitmap getImage(int position, int scale) {
-            InputStream zis;
-            Bitmap bm = null;
-            ArrayList<? extends ZipEntry> imageArray = Collections.list(mZipFile.entries());
-
-            BitmapFactory.Options opts = new BitmapFactory.Options();
-            opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
-            
-            try {                
-                if(imageArray.get(position).getSize() == 0)
-                    return null;
-                Log.v(TAG, "file name is "+ imageArray.get(position).getName());
-                zis = mZipFile.getInputStream(imageArray.get(position));
-
-                BitmapFactory.Options options = new BitmapFactory.Options();
-                options.inSampleSize = scale;
-                bm = BitmapFactory.decodeStream(zis, null, options);
-                zis.close();
-            } catch (IOException e) {
-                Log.e(TAG, e.getMessage());
-                e.printStackTrace();
-            }
-            if(bm == null) {
-                Log.e(TAG, String.format("what happened here? size: %d", imageArray.get(position).getSize()) );
-            }
-            
-            //return getThreshed(bm);
-            return bm;
-        }
-        
-        @SuppressWarnings("unused")
-        private static Bitmap getThreshed(Bitmap bm) {
-            // this is the one that we actually use
-            //return WriteFile.writeBitmap(Thresholder.edgeAdaptiveThreshold(ReadFile.readBitmap(bm)));
-            //return WriteFile.writeBitmap(Thresholder.edgeAdaptiveThreshold(ReadFile.readBitmap(bm), 100, 100, 32, 1));
-            
-            //causes blocks of differently thresholded areas
-            //return WriteFile.writeBitmap(Thresholder.fisherAdaptiveThreshold(ReadFile.readBitmap(bm)));
-            //return WriteFile.writeBitmap(Thresholder.fisherAdaptiveThreshold(ReadFile.readBitmap(bm), 1, 1));
-            
-            //makes outlines around things, small letters become too bold
-            return WriteFile.writeBitmap(Thresholder.sobelEdgeThreshold(ReadFile.readBitmap(bm)));
-        }
-        
-        private static int getScale(int position) {
-            int scale = 1;
-            try {
-                ArrayList<? extends ZipEntry> imageArray = Collections.list(mZipFile.entries());
-                InputStream zis = mZipFile.getInputStream(imageArray.get(position));
-                Rect rect = new Rect();
-
-                BitmapFactory.Options options = new BitmapFactory.Options();
-                options.inJustDecodeBounds = true;
-                BitmapFactory.decodeStream(zis, rect, options);
-                
-                int scaleHeight = options.outHeight / mScreenSize.y;
-                int scaleWidth = options.outWidth / mScreenSize.x;
-                
-                if(scaleHeight > 1 || scaleWidth > 1) {
-                    if(scaleHeight > scaleWidth)
-                        scale = scaleHeight;
-                    else 
-                        scale = scaleWidth;
-                }
-                
-                Log.v(ImagePagerActivity.TAG, String.format("scale: %d, s_x:%d, s_y:%d, h:%d, w:%d, %d",
-                        scale, mScreenSize.x, mScreenSize.y, options.outHeight, options.outWidth, scaleHeight));
-                
-            
-            } catch (IOException e) {
-                scale = 1;
-                Log.e(TAG, e.getMessage());
-            }
-            return scale;
+        static private Bitmap getImage(int position) {
+            return mMangaReader.getImage(position);
         }
     }
 
@@ -350,8 +283,8 @@ public class ImagePagerActivity extends FragmentActivity {
         private int position;
         private ImageViewTouch mImageView;
         private Bitmap mBitmap;
-        private int mScale = -1;
         private View mRootView;
+        private List<OcrResult> mResults;
         
         @SuppressWarnings("unused")
         private Highlighter displayHighlight(Rect bounds) {
@@ -419,9 +352,7 @@ public class ImagePagerActivity extends FragmentActivity {
                     (int)outRect.width(),
                     (int)outRect.height());
 
-            //mImageView.setImageBitmap(mResizedBitmap, null, 1f, 8f);
             return resizedBitmap;
-
         }
 
         public Ocr getOcr() {
@@ -431,7 +362,21 @@ public class ImagePagerActivity extends FragmentActivity {
         public void findText() {
             CompletionCallback displayHighlightCB = new DisplayHighlightCB();
             ocr.setCompletionCallback(displayHighlightCB);
-            ocr.enqueue(mBitmap);
+            if(mResults == null) {
+                ocr.enqueue(mBitmap);
+            } else {
+                displayHighlightCB.onCompleted(mResults);
+            }
+        }
+
+        public void saveTest() {
+            //find the text in the image, in case it hasn't been done already
+            findText();
+            try {
+                HydrogenGA.saveTest(mResults, ImagePagerAdapter.getFileName(), position);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     
         private OnLongClickListener mLongClickListener = new OnLongClickListener() {
@@ -450,61 +395,28 @@ public class ImagePagerActivity extends FragmentActivity {
                 return true;
             }   
         };
-        /*
-        private OnTouchListener mTouchListener = new OnTouchListener() {
-
-            @Override
-            public boolean onTouch(View v, MotionEvent e) {
-                if(e.getAction() == MotionEvent.ACTION_UP) {
-                    View current = (View) v.getParent();
-                    LinearLayout highlighter = (LinearLayout) current.findViewById(R.id.highlighter);
-                
-                    if( highlighter.getVisibility() == View.GONE) {
-                        highlightX = e.getX();
-                        highlightY = e.getY();
-                        //highlightX = 456.438f + 150.0f;
-                        //highlightY = 166.572f + 150.0f;
-                    }
-                    Log.v(TAG, String.format("touch %f,%f", highlightX, highlightY));
-                    v.performClick();
-                }
-                return false;
-            }
-        };*/
 
         private class DisplayHighlightCB implements CompletionCallback {
         
             @Override
             public void onCompleted(List<OcrResult> results) {                
-                
-                //String message = "";
-                //Intent intent = new Intent(ImageFragment.this.getActivity(), DisplayMessageActivity.class);
-                Log.d("DisplayHighlightCB", "got some results");
+                String tag = "DisplayHighlightCB";
+                Log.d(tag, "got some results");
+                mResults = results;
                 if(results.isEmpty()) {
-                    //message = "I was afraid of this.";
+                    Log.d(tag, "no text found");
                 } else {
 
-                    //FragmentTransaction ft = getChildFragmentManager().beginTransaction();
                     for(int i = 0; i < results.size(); i++) {
-                        //message += results.get(i).getString() + "\n";
                         if(results.get(i).getBounds().top == 0) {
                             continue;
                         }
 
                         displayHighlight(results.get(i).getBounds());
-                        //ft.add(mRootView.getId(), displayHighlight(results.get(i).getBounds()), String.format("h%d", i));
-                        Log.d("DisplayHighlightCB", results.get(i).getBounds().flattenToString());
-                        Log.d("DisplayHighlightCB", results.get(i).getString());
-
+                        Log.d(tag, results.get(i).getBounds().flattenToString());
+                        Log.d(tag, results.get(i).getString());
                     }
-                    //ft.commit();           
                 }
-                //intent.putExtra(ImagePagerActivity.EXTRA_MESSAGE, message);
-                //intent.putExtra(ImagePagerActivity.FILE_NAME, "");
-                //intent.putExtra(ImagePagerActivity.BITMAP, mResizedBitmap);
-        
-                //startActivity(intent);
-                
             }
             
         }
@@ -531,9 +443,7 @@ public class ImagePagerActivity extends FragmentActivity {
         private void drawImage() {
 
             if(mBitmap == null || mBitmap.isRecycled()) {
-                if(mScale == -1)
-                    mScale = ImagePagerAdapter.getScale(position);
-                mBitmap = ImagePagerAdapter.getImage(position, mScale);
+                mBitmap = ImagePagerAdapter.getImage(position);
                 mImageView.setImageBitmap(mBitmap, null, 1f, 8f);
                 //TODO fix initial image display
                 //works with smaller images
@@ -542,6 +452,16 @@ public class ImagePagerActivity extends FragmentActivity {
                 mImageView.setDisplayType(DisplayType.FIT_TO_SCREEN);
                 
                 Log.v(TAG, String.format("image set %d", position));
+                try{
+                    Log.v(TAG, String.format("image dims %d", mBitmap.getWidth()));
+                } catch (NullPointerException e) {
+                    Log.v(TAG, String.format("image width"));
+                }
+                try{
+                    Log.v(TAG, String.format("image dims %d", mBitmap.getHeight()));
+                } catch (NullPointerException e) {
+                    Log.v(TAG, String.format("image height"));
+                }
                 Log.v(TAG, String.format("image dims %d,%d", mBitmap.getWidth(), mBitmap.getHeight()));
                 
             }
