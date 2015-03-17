@@ -27,6 +27,7 @@ import com.ianhook.android.ocrmanga.R;
 import com.ianhook.android.ocrmanga.util.HydrogenGA;
 import com.ianhook.android.ocrmanga.util.MangaReader;
 import com.ianhook.android.ocrmanga.util.OcrGeneticDetection;
+import com.ianhook.android.ocrmanga.util.OcrRectTest;
 
 import android.annotation.SuppressLint;
 import android.app.ActionBar;
@@ -371,12 +372,9 @@ public class ImagePagerActivity extends FragmentActivity {
 
         public void saveTest() {
             //find the text in the image, in case it hasn't been done already
-            findText();
-            try {
-                HydrogenGA.saveTest(mResults, ImagePagerAdapter.getFileName(), position);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            //findText();
+            OcrRectTest ocrTest = new OcrRectTest();
+            ocrTest.writeTests(ImagePagerAdapter.getFileName(), position, mResults);
         }
     
         private OnLongClickListener mLongClickListener = new OnLongClickListener() {
