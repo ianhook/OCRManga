@@ -15,5 +15,19 @@
     <string name="dummy_content">DUMMY\nCONTENT</string>
     <string name="title_activity_image_pager">ImagePagerActivity</string>
     <string name="imageview_description">image</string>
+    <string name="button_up">up</string>
+    <string name="button_down">down</string>
+    <string name="button_left">left</string>
+    <string name="button_right">right</string>
+    <string name="button_previous">Previous</string>
+    <string name="button_next">Next</string>
+    <string name="button_delete">Delete</string>
+    <string name="highlight_content">highlight content</string>
+    <string-array name="spinner_array">
+        <item>Top</item>
+        <item>Bottom</item>
+        <item>Left</item>
+        <item>Right</item>
+    </string-array>
 
 </resources>
