@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.ianhook.android.ocrmanga.Highlighter xmlns:android="http://schemas.android.com/apk/res/android"
+<com.ianhook.android.ocrmanga.Highlighter
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/highlighter"
     android:background="#50134BE8"
     android:layout_width="100dp" 
     android:layout_height="100dp" 
     android:orientation="horizontal">
-    
 
 </com.ianhook.android.ocrmanga.Highlighter>

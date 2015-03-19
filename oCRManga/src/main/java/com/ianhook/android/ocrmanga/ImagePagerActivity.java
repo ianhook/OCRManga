@@ -4,27 +4,15 @@ import it.sephiroth.android.library.imagezoom.ImageViewTouch;
 import it.sephiroth.android.library.imagezoom.ImageViewTouchBase.DisplayType;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.ObjectOutputStream;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
-import java.util.zip.ZipFile;
 
 import com.googlecode.eyesfree.ocr.client.Ocr;
 import com.googlecode.eyesfree.ocr.client.OcrResult;
 import com.googlecode.eyesfree.ocr.client.Ocr.CompletionCallback;
 import com.googlecode.eyesfree.ocr.client.Ocr.Parameters;
-import com.googlecode.eyesfree.textdetect.Thresholder;
-import com.googlecode.leptonica.android.ReadFile;
-import com.googlecode.leptonica.android.WriteFile;
 import com.googlecode.tesseract.android.TessBaseAPI;
-import com.ianhook.android.ocrmanga.R;
-import com.ianhook.android.ocrmanga.util.HydrogenGA;
 import com.ianhook.android.ocrmanga.util.MangaReader;
 import com.ianhook.android.ocrmanga.util.OcrGeneticDetection;
 import com.ianhook.android.ocrmanga.util.OcrRectTest;
@@ -35,7 +23,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Point;
 import android.graphics.Rect;
@@ -44,36 +31,26 @@ import android.graphics.RectF;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentStatePagerAdapter;
-import android.support.v4.app.FragmentTransaction;
 import android.support.v4.view.ViewPager;
 import android.util.Log;
 import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup.LayoutParams;
 import android.view.WindowManager;
-import android.view.View.OnClickListener;
 import android.view.View.OnLongClickListener;
-import android.view.View.OnTouchListener;
 import android.view.ViewGroup;
-import android.widget.FrameLayout;
-import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 
 public class ImagePagerActivity extends FragmentActivity {
-    public final static String EXTRA_MESSAGE = "com.ianhook.android.ocrmanga.MESSAGE";
-    public final static String FILE_NAME = "com.ianhook.android.ocrmanga.FILE_NAME";
-    public final static String BITMAP = "com.ianhook.android.ocrmanga.BITMAP";
-    public final static String TRANSLATION = "com.ianhook.android.ocrmanga.TRANSLATION";
     private final static String PAGE_NUM = "page";
+    public final static String FILE_NAME = "com.ianhook.android.ocrmanga.FILE_NAME";
 
     public static final String TAG = "ImagePagerActivity";
     private ImagePagerAdapter mIPA;
@@ -314,7 +291,12 @@ public class ImagePagerActivity extends FragmentActivity {
             
         }
 
-        public Bitmap getBitmapSection(Rect bounds){
+
+        public Bitmap getBitmapSection(Rect bounds) {
+            return getBitmapSection(bounds, null);
+        }
+
+        public Bitmap getBitmapSection(Rect bounds, RectF pad) {
 
             RectF outRect = new RectF();
 
@@ -334,6 +316,23 @@ public class ImagePagerActivity extends FragmentActivity {
 
             outRect.bottom = (float) Math.min(mBitmap.getHeight(), outRect.bottom);
             outRect.right = (float) Math.min(mBitmap.getWidth(), outRect.right);
+
+            if(pad != null) {
+                pad.left = outRect.width() * .75f;
+                pad.right = pad.left + outRect.width();
+                pad.top = outRect.height() * .75f;
+                pad.bottom = pad.top + outRect.height() * .75f;
+                if(outRect.left - pad.left < 0) {
+                    pad.left += outRect.left - pad.left; //this should be negative so we add
+                }
+                if(outRect.top - pad.top < 0) {
+                    pad.top += outRect.top - pad.top; //this should be negative so we add
+                }
+                outRect.left = Math.max(0, outRect.left - pad.left);
+                outRect.top = Math.min(0, outRect.top - pad.top);
+                outRect.right = Math.min(mBitmap.getWidth(), outRect.right + outRect.width() * .75f);
+                outRect.bottom = Math.min(mBitmap.getHeight(), outRect.bottom + outRect.height() * .75f);
+            }
 
             Log.v(TAG, String.format("highlight %d,%d, %d,%d", (int)bounds.left,
                     (int)bounds.top,
@@ -400,6 +399,10 @@ public class ImagePagerActivity extends FragmentActivity {
             public void onCompleted(List<OcrResult> results) {                
                 String tag = "DisplayHighlightCB";
                 Log.d(tag, "got some results");
+                ImagePagerActivity IPA = (ImagePagerActivity) getActivity();
+                if(IPA.getActionBar().isShowing()) {
+                    IPA.getActionBar().hide();
+                }
                 mResults = results;
                 if(results.isEmpty()) {
                     Log.d(tag, "no text found");

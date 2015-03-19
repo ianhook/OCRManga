@@ -5,6 +5,7 @@ import com.ianhook.android.ocrmanga.R;
 import android.content.Context;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.ContextMenu;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
@@ -37,6 +38,12 @@ public class OCRResults extends EditText {
     public void setText(CharSequence text, BufferType type) {
         super.setText(text, type);
         mSave = text;
+    }
+
+    public void onCreateContextMenu(ContextMenu menu) {
+        //this is a location to change the copy/cut/paste menu to something useful
+        //the other possibility seems to be overriding the long press event handler, this seems best
+        //http://stackoverflow.com/questions/4181309/android-long-press-on-edit-text-behavior/7383161#7383161
     }
 
     /**
@@ -81,17 +88,16 @@ public class OCRResults extends EditText {
     public void onTextCopy(){
         Log.d(TAG, "copying");
         try {
-            int min = 0;
-            int max = getText().length();
             final int selStart = getSelectionStart();
             final int selEnd = getSelectionEnd();
             
-            min = Math.max(0, Math.min(selStart, selEnd));
-            max = Math.max(0, Math.max(selStart, selEnd));
+            int min = Math.max(0, Math.min(selStart, selEnd));
+            int max = Math.max(0, Math.max(selStart, selEnd));
             Log.d(TAG, String.format("-- %d, %d", selStart, selEnd));
             Log.d(TAG, String.format("-- %d, %d", min, max));
     
             GooDictionary v = (GooDictionary)((View)this.getParent()).findViewById(R.id.gooDict);
+            v.setVisibility(View.VISIBLE);
             String trans = getText().subSequence(min, max).toString();
             v.setJapanese(trans);
             hideSoftKeyboard();

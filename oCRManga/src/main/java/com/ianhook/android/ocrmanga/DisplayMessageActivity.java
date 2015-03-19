@@ -7,14 +7,22 @@ import com.ianhook.android.ocrmanga.R;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.RectF;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 public class DisplayMessageActivity extends Activity {
+    public final static String EXTRA_MESSAGE = "com.ianhook.android.ocrmanga.MESSAGE";
+    public final static String FILE_NAME = "com.ianhook.android.ocrmanga.FILE_NAME";
+    public final static String BITMAP = "com.ianhook.android.ocrmanga.BITMAP";
+    public final static String HIGHLIGHT = "com.ianhook.android.ocrmanga.HIGHLIGHT";
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -23,10 +31,11 @@ public class DisplayMessageActivity extends Activity {
 
 	    // Get the message from the intent
 	    Intent intent = getIntent();
-	    String message = intent.getStringExtra(ImagePagerActivity.EXTRA_MESSAGE);
-	    String file_name = intent.getStringExtra(ImagePagerActivity.FILE_NAME);
-        Bitmap resizedBitmap = (Bitmap) intent.getParcelableExtra(ImagePagerActivity.BITMAP);
-	    //message = this.getExternalFilesDir(null).getAbsolutePath();
+	    String message = intent.getStringExtra(EXTRA_MESSAGE);
+	    String file_name = intent.getStringExtra(FILE_NAME);
+        Bitmap resizedBitmap = (Bitmap) intent.getParcelableExtra(BITMAP);
+        RectF highlight = (RectF) intent.getParcelableExtra(HIGHLIGHT);
+
 	    // Create the text view
 	    TextView textView = (TextView) findViewById(R.id.textView1);
 	    //textView.setTextSize(40);
@@ -40,6 +49,12 @@ public class DisplayMessageActivity extends Activity {
 		    IV.setImageBitmap(resizedBitmap);
             Log.d(ImagePagerActivity.TAG, "from intent");
 		}
+        if(highlight != null) {
+            LinearLayout HV = (LinearLayout) findViewById(R.id.padded_highlighter);
+            HV.setVisibility(View.VISIBLE);
+            HV.setX(highlight.left);
+            HV.setLayoutParams(new ViewGroup.LayoutParams((int) highlight.width(), (int) highlight.height()));
+        }
 
 	    // Set the text view as the activity layout
 	    //setContentView(textView);
