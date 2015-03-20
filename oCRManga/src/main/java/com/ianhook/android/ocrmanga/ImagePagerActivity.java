@@ -277,12 +277,8 @@ public class ImagePagerActivity extends FragmentActivity {
             LayoutInflater vi = (LayoutInflater) getActivity().getApplicationContext().
                     getSystemService(Context.LAYOUT_INFLATER_SERVICE);
             Highlighter newHighlight = (Highlighter) vi.inflate(R.layout.fragment_highlighter, null);
-                    RectF temp = new RectF(x,y,x+width,y+height);
-            mImageView.getImageViewMatrix().mapRect(temp);
-
-            newHighlight.setLayoutParams(new LayoutParams((int) temp.width(), (int) temp.height()));
-            newHighlight.setX(temp.left);
-            newHighlight.setY(temp.top);
+            RectF temp = new RectF(x,y,x+width,y+height);
+            newHighlight.setRect(temp);
 
             newHighlight.setImagePage(this);
 
@@ -291,14 +287,18 @@ public class ImagePagerActivity extends FragmentActivity {
             
         }
 
+        public ImageViewTouch getImageView() {
+            return mImageView;
+        }
 
-        public Bitmap getBitmapSection(Rect bounds) {
+
+        public Bitmap getBitmapSection(RectF bounds) {
             return getBitmapSection(bounds, null);
         }
 
-        public Bitmap getBitmapSection(Rect bounds, RectF pad) {
+        public Bitmap getBitmapSection(RectF bounds, RectF pad) {
 
-            RectF outRect = new RectF();
+            RectF outRect = new RectF(bounds);
 
             RectF bitmapRect = mImageView.getBitmapRect();
             Log.v(TAG, bitmapRect.toString());
@@ -310,7 +310,8 @@ public class ImagePagerActivity extends FragmentActivity {
             Log.v(TAG, String.format("dmat %s", dmat.toString()));
 
             dmat.invert(dmat);
-            dmat.mapRect(outRect, highlightRectF);
+            //dmat.mapRect(outRect, highlightRectF);
+
             outRect.left = (float) Math.max(0.0, outRect.left);
             outRect.top = (float) Math.max(0.0, outRect.top);
 
@@ -319,26 +320,32 @@ public class ImagePagerActivity extends FragmentActivity {
 
             if(pad != null) {
                 pad.left = outRect.width() * .75f;
-                pad.right = pad.left + outRect.width();
                 pad.top = outRect.height() * .75f;
-                pad.bottom = pad.top + outRect.height() * .75f;
                 if(outRect.left - pad.left < 0) {
                     pad.left += outRect.left - pad.left; //this should be negative so we add
                 }
                 if(outRect.top - pad.top < 0) {
                     pad.top += outRect.top - pad.top; //this should be negative so we add
                 }
+                pad.right = pad.left + highlightRectF.width();
+                pad.bottom = pad.top + highlightRectF.height();
+
                 outRect.left = Math.max(0, outRect.left - pad.left);
-                outRect.top = Math.min(0, outRect.top - pad.top);
+                outRect.top = Math.max(0, outRect.top - pad.top);
                 outRect.right = Math.min(mBitmap.getWidth(), outRect.right + outRect.width() * .75f);
                 outRect.bottom = Math.min(mBitmap.getHeight(), outRect.bottom + outRect.height() * .75f);
+
+                Log.v(TAG, String.format("padding %f, %f, %f, %f", pad.left,
+                        pad.top,
+                        pad.width(),
+                        pad.height()));
             }
 
-            Log.v(TAG, String.format("highlight %d,%d, %d,%d", (int)bounds.left,
-                    (int)bounds.top,
-                    (int)bounds.width(),
-                    (int)bounds.height()));
-            Log.v(TAG, String.format("outRect %f,%f, %f,%f", outRect.left,
+            Log.v(TAG, String.format("highlight %f, %f, %f, %f", bounds.left,
+                    bounds.top,
+                    bounds.width(),
+                    bounds.height()));
+            Log.v(TAG, String.format("outRect %f, %f, %f, %f", outRect.left,
                     outRect.top,
                     outRect.width(), outRect.height()));
 

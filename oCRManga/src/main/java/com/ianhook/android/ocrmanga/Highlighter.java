@@ -11,6 +11,7 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.ViewGroup;
 import android.widget.LinearLayout;
 
 import com.googlecode.eyesfree.ocr.client.Ocr;
@@ -45,9 +46,18 @@ public class Highlighter extends LinearLayout implements OnClickListener {
 
     private Bitmap mResizedBitmap;
     private ImagePagerActivity.ImageFragment mImageFragment;
+    private RectF mRect;
 
     public void setImagePage(ImagePagerActivity.ImageFragment imgf) {
         mImageFragment = imgf;
+
+        RectF temp = new RectF(mRect);
+
+        mImageFragment.getImageView().getImageViewMatrix().mapRect(temp);
+
+        setLayoutParams(new ViewGroup.LayoutParams((int) temp.width(), (int) temp.height()));
+        setX(temp.left);
+        setY(temp.top);
     }
     
     public void setSelected() {
@@ -58,6 +68,14 @@ public class Highlighter extends LinearLayout implements OnClickListener {
         setBackground(new ColorDrawable(Color.parseColor(BACKGROUND_COLOR)));
     }
 
+    public void setRect(RectF dims) {
+        mRect = new RectF(dims);
+    }
+
+    public RectF getRect() {
+        return mRect;
+    }
+
     public void onClick(View v) {
         Log.d(TAG, "got click");
         setSelected();
@@ -65,7 +83,7 @@ public class Highlighter extends LinearLayout implements OnClickListener {
         Rect highlightRect = new Rect();
         v.getHitRect(highlightRect);
         RectF padding = new RectF();
-        mResizedBitmap = mImageFragment.getBitmapSection(highlightRect, padding);
+        mResizedBitmap = mImageFragment.getBitmapSection(mRect, padding);
 
         Ocr ocr = mImageFragment.getOcr();
 
