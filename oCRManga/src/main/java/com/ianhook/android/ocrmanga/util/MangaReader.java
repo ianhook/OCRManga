@@ -25,53 +25,29 @@ import java.util.zip.ZipFile;
 /**
  * Created by ian on 3/13/15.
  */
-public class MangaReader {
+public class MangaReader extends ImageFileReader {
 
     private static final String TAG = "com.ianhook.MangaR";
-    private static ZipFile mZipFile;
-    private static int mCount;
-    private static Point mScreenSize;
-
-    public MangaReader() {
-    }
+    private ZipFile mZipFile;
 
     public MangaReader(String file_name) throws IOException {
-        setFile(file_name);
-        mScreenSize = null;
+        super(file_name);
     }
 
     public MangaReader(File file) throws IOException {
-        setFile(file);
-        mScreenSize = null;
+        super(file);
     }
-
     public MangaReader(File file, Point screen_size) throws IOException {
-        setFile(file);
-        mScreenSize = screen_size;
+        super(file, screen_size);
     }
 
-    public MangaReader(String file_name, Point screen_size) throws IOException {
-        setFile(file_name);
-        mScreenSize = screen_size;
-    }
-
-    public void setScreen(Point point) {
-        mScreenSize = point;
-    }
-
-    public void setFile(String file_name) throws IOException {
-        Log.v(TAG, "loading file " + file_name);
-        setFile(new File(file_name));
-
-    }
-
-    public void setFile(File file) throws ZipException, IOException {
+    public void setFile(File file) throws IOException {
         mZipFile = new ZipFile(file);
-        mCount = Collections.list(mZipFile.entries()).size();
-        Log.v(TAG, String.format("%d images found", mCount));
+        int count = Collections.list(mZipFile.entries()).size();
+        Log.v(TAG, String.format("%d images found", count));
     }
 
-    public static String getFileName() {
+    public String getFileName() {
         File file = new File(mZipFile.getName());
         return file.getName();
     }
@@ -84,10 +60,6 @@ public class MangaReader {
         ArrayList<? extends ZipEntry> imageArray = Collections.list(mZipFile.entries());
 
         return "file: " + imageArray.get(position).getName();
-    }
-
-    public Bitmap getImage(int position) {
-        return getImage(position, getScale(position));
     }
 
     public Bitmap getImage(int position, int scale) {
@@ -120,21 +92,7 @@ public class MangaReader {
         return bm;
     }
 
-    @SuppressWarnings("unused")
-    private Bitmap getThreshed(Bitmap bm) {
-        // this is the one that we actually use
-        //return WriteFile.writeBitmap(Thresholder.edgeAdaptiveThreshold(ReadFile.readBitmap(bm)));
-        //return WriteFile.writeBitmap(Thresholder.edgeAdaptiveThreshold(ReadFile.readBitmap(bm), 100, 100, 32, 1));
-
-        //causes blocks of differently thresholded areas
-        //return WriteFile.writeBitmap(Thresholder.fisherAdaptiveThreshold(ReadFile.readBitmap(bm)));
-        //return WriteFile.writeBitmap(Thresholder.fisherAdaptiveThreshold(ReadFile.readBitmap(bm), 1, 1));
-
-        //makes outlines around things, small letters become too bold
-        return WriteFile.writeBitmap(Thresholder.sobelEdgeThreshold(ReadFile.readBitmap(bm)));
-    }
-
-    private int getScale(int position) {
+    protected int getScale(int position) {
         int scale = 1;
         try {
             ArrayList<? extends ZipEntry> imageArray = Collections.list(mZipFile.entries());

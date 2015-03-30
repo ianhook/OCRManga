@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.Arrays;
 
 import com.ianhook.android.ocrmanga.util.OcrGeneticDetection;
+import com.ianhook.android.ocrmanga.util.OcrRectTest;
 import com.ianhook.android.ocrmanga.util.OcrStringTest;
 
 import android.support.v7.app.ActionBarActivity;
@@ -166,7 +167,7 @@ public class FileBrowserActivity extends ActionBarActivity {
 	        if(OcrGeneticDetection.mDoGA) {
 	            Log.d(TAG, "Evole OCR");
 	            final OcrGeneticDetection OGD = new OcrGeneticDetection(getBaseContext());
-                OGD.setTest(new OcrStringTest());
+                OGD.setTest(new OcrRectTest());
 	            
 	            //OGD.startOcr(ocrInit);	            
 	            OGD.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);

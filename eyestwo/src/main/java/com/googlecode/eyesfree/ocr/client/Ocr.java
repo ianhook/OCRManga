@@ -39,6 +39,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.Serializable;
 import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.Set;
@@ -651,7 +652,7 @@ public class Ocr {
      *
      * @author alanv@google.com (Alan Viverette)
      */
-    public static class Parameters implements Parcelable {
+    public static class Parameters implements Parcelable, Serializable {
 
         /** Detect text in image using TextDetect */
         public static final String FLAG_DETECT_TEXT = "detect_text";

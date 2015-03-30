@@ -47,17 +47,39 @@ public class Highlighter extends LinearLayout implements OnClickListener {
     private Bitmap mResizedBitmap;
     private ImagePagerActivity.ImageFragment mImageFragment;
     private RectF mRect;
+    private int mID;
+    private RectF mPadding;
 
     public void setImagePage(ImagePagerActivity.ImageFragment imgf) {
         mImageFragment = imgf;
 
-        RectF temp = new RectF(mRect);
+        updateScreen();
+    }
 
-        mImageFragment.getImageView().getImageViewMatrix().mapRect(temp);
+    private void updateScreen() {
+        if (mImageFragment != null && mRect != null) {
 
-        setLayoutParams(new ViewGroup.LayoutParams((int) temp.width(), (int) temp.height()));
-        setX(temp.left);
-        setY(temp.top);
+            Log.d(TAG, mRect.toString());
+            RectF temp = new RectF(mRect);
+            mImageFragment.getImageView().getImageViewMatrix().mapRect(temp);
+            Log.d(TAG, mImageFragment.getImageView().getImageViewMatrix().toString());
+
+            Log.d(TAG, temp.toString());
+
+
+            ViewGroup.LayoutParams params = getLayoutParams();
+
+            if(params == null) {
+                params = new ViewGroup.LayoutParams((int) temp.width(), (int) temp.height());
+            }
+
+            setX(temp.left);
+            setY(temp.top);
+            params.height = (int)temp.height();
+            params.width = (int)temp.width();
+
+            setLayoutParams(params);
+        }
     }
     
     public void setSelected() {
@@ -68,8 +90,31 @@ public class Highlighter extends LinearLayout implements OnClickListener {
         setBackground(new ColorDrawable(Color.parseColor(BACKGROUND_COLOR)));
     }
 
+    public void setHighlightID(int id) {
+        mID = id;
+    }
+
     public void setRect(RectF dims) {
         mRect = new RectF(dims);
+        updateScreen();
+    }
+
+    public void updateRectF(RectF dims) {
+        Log.d(TAG, mRect.toString());
+        Log.d(TAG, dims.toString());
+        Log.d(TAG, mPadding.toString());
+        mRect.top += dims.top - mPadding.top;
+        mRect.left += dims.left - mPadding.left;
+        mRect.bottom += dims.bottom - mPadding.bottom;
+        mRect.right += dims.right - mPadding.right;
+        Log.d(TAG, mRect.toString());
+        redraw();
+    }
+
+    public void redraw() {
+
+        updateScreen();
+        requestLayout();
     }
 
     public RectF getRect() {
@@ -80,15 +125,13 @@ public class Highlighter extends LinearLayout implements OnClickListener {
         Log.d(TAG, "got click");
         setSelected();
 
-        Rect highlightRect = new Rect();
-        v.getHitRect(highlightRect);
-        RectF padding = new RectF();
-        mResizedBitmap = mImageFragment.getBitmapSection(mRect, padding);
+        mPadding = new RectF();
+        mResizedBitmap = mImageFragment.getBitmapSection(mRect, mPadding);
 
         Ocr ocr = mImageFragment.getOcr();
 
         if(ocr != null) {
-            Ocr.CompletionCallback displayText = new DisplayText(padding);
+            Ocr.CompletionCallback displayText = new DisplayText(mPadding);
             ocr.setCompletionCallback(displayText);
             ocr.enqueue(mResizedBitmap);
         }
@@ -129,8 +172,10 @@ public class Highlighter extends LinearLayout implements OnClickListener {
             intent.putExtra(DisplayMessageActivity.FILE_NAME, "");
             intent.putExtra(DisplayMessageActivity.BITMAP, mResizedBitmap);
             intent.putExtra(DisplayMessageActivity.HIGHLIGHT, mHighlightPadding);
+            intent.putExtra(DisplayMessageActivity.HIGHLIGHT_ID, mID);
 
-            mImageFragment.startActivity(intent);
+            Log.d(TAG, String.format("highlight id: %d", mID));
+            mImageFragment.startActivityForResult(intent, 1);
 
         }
 

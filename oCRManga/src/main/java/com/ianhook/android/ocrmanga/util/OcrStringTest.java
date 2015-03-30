@@ -25,7 +25,6 @@ public class OcrStringTest extends OcrTestBase {
     private static final String TAG = "com.ianhook.OcrStrTest";
 
     private File[] mImageDir;
-    public boolean mDebug = false;
 
     protected void initTest() {
         File temp_f = new File(Environment.getExternalStorageDirectory(), "test_data");

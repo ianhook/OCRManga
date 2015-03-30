@@ -15,6 +15,8 @@ public abstract class OcrTestBase {
     protected int mCurrentPosition;
     protected int mLength;
 
+    public boolean mDebug = false;
+
     public OcrTestBase() {
         mLength = 0;
         initTest();

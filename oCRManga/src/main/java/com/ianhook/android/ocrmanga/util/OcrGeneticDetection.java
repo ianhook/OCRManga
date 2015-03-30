@@ -1,5 +1,8 @@
 package com.ianhook.android.ocrmanga.util;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +33,7 @@ import com.googlecode.tesseract.android.TessBaseAPI;
 public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
     private static final String TAG = "com.ianhook.OcrGD";
     //whether the app should attempt learning
-    public final static Boolean mDoGA = false;
+    public final static Boolean mDoGA = true;
     //whether learning should evaluate final message text or just boxes
     public final static Boolean textEval = true;
     
@@ -47,7 +50,7 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
     private int mGeneration;
     private Object mServiceLock;
     private FitnessFunction myFunc;
-    private OcrStringTest mOcrTest;
+    private OcrTestBase mOcrTest;
     
     public class GeneDescriptor {
         public String name;
@@ -76,7 +79,7 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
         }
     }
 
-    public void setTest(OcrStringTest ot) {
+    public void setTest(OcrTestBase ot) {
         mOcrTest = ot;
         mOcrTest.mDebug = true;
     }
@@ -279,6 +282,20 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
                             arg0.getGene(i).getAllele().toString()));
                 }
                 mBest = mResult;
+
+                //save the best for easy usage
+                try
+                {
+                    FileOutputStream fileOut =
+                            new FileOutputStream("/storage/sdcard/Manga/ga_best_params.ser");
+                    ObjectOutputStream out = new ObjectOutputStream(fileOut);
+                    out.writeObject(params1);
+                    out.close();
+                    fileOut.close();
+                }catch(IOException i)
+                {
+                    i.printStackTrace();
+                }
             }
 
             mCurrentChrome += 1;

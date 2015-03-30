@@ -23,6 +23,8 @@
     <string name="button_previous">Previous</string>
     <string name="button_next">Next</string>
     <string name="button_delete">Delete</string>
+    <string name="button_save">Save</string>
+    <string name="button_toggle">Toggle</string>
     <string name="highlight_content">highlight content</string>
     <string-array name="spinner_array">
         <item>Top</item>

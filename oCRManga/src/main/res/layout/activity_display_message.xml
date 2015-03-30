@@ -26,6 +26,7 @@
         android:layout_height="wrap_content"
         android:layout_below="@+id/textView1"
         android:id="@+id/imageWrapper">
+
         <ImageView
             android:id="@+id/imageView1"
             android:layout_width="wrap_content"
@@ -65,7 +66,7 @@
         <RelativeLayout
             android:layout_width="fill_parent"
             android:layout_height="fill_parent"
-            android:visibility="gone"
+            android:id="@+id/edit_highlighter"
             >
 
             <Spinner
@@ -81,7 +82,7 @@
                 android:layout_height="wrap_content"
                 android:layout_below="@+id/spinner"
                 android:id="@+id/movement_buttons">
-                <Button
+                <ImageButton
                     style="?android:attr/buttonStyleSmall"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -89,7 +90,7 @@
                     android:src="@drawable/ic_left_arrow"
                     android:layout_weight="0.2" />
 
-                <Button
+                <ImageButton
                     style="?android:attr/buttonStyleSmall"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -97,7 +98,7 @@
                     android:src="@drawable/ic_up_arrow"
                     android:layout_weight="0.2" />
 
-                <Button
+                <ImageButton
                     style="?android:attr/buttonStyleSmall"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -105,7 +106,7 @@
                     android:id="@+id/button_down"
                     android:layout_weight="0.2" />
 
-                <Button
+                <ImageButton
                     style="?android:attr/buttonStyleSmall"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -124,19 +125,25 @@
                     android:layout_height="wrap_content"
                     android:text="@string/button_previous"
                     android:id="@+id/button_previous"
-                    android:layout_weight="0.3"/>
+                    android:layout_weight="0.2"/>
+                <Button
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/button_save"
+                    android:id="@+id/button_save"
+                    android:layout_weight="0.2"/>
                 <Button
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/button_delete"
                     android:id="@+id/button_delete"
-                    android:layout_weight="0.3" />
+                    android:layout_weight="0.2" />
                 <Button
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/button_next"
                     android:id="@+id/button_next"
-                    android:layout_weight="0.3" />
+                    android:layout_weight="0.2"/>
             </LinearLayout>
         </RelativeLayout>
     </LinearLayout>

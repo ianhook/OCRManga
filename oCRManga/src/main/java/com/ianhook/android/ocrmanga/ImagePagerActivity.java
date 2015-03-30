@@ -1,18 +1,20 @@
 package com.ianhook.android.ocrmanga;
 
 import it.sephiroth.android.library.imagezoom.ImageViewTouch;
+import it.sephiroth.android.library.imagezoom.ImageViewTouchBase;
 import it.sephiroth.android.library.imagezoom.ImageViewTouchBase.DisplayType;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.zip.ZipException;
 
 import com.googlecode.eyesfree.ocr.client.Ocr;
 import com.googlecode.eyesfree.ocr.client.OcrResult;
 import com.googlecode.eyesfree.ocr.client.Ocr.CompletionCallback;
 import com.googlecode.eyesfree.ocr.client.Ocr.Parameters;
 import com.googlecode.tesseract.android.TessBaseAPI;
+import com.ianhook.android.ocrmanga.util.ImageFileReader;
 import com.ianhook.android.ocrmanga.util.MangaReader;
 import com.ianhook.android.ocrmanga.util.OcrGeneticDetection;
 import com.ianhook.android.ocrmanga.util.OcrRectTest;
@@ -42,7 +44,6 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup.LayoutParams;
 import android.view.WindowManager;
 import android.view.View.OnLongClickListener;
 import android.view.ViewGroup;
@@ -51,6 +52,7 @@ import android.widget.ProgressBar;
 public class ImagePagerActivity extends FragmentActivity {
     private final static String PAGE_NUM = "page";
     public final static String FILE_NAME = "com.ianhook.android.ocrmanga.FILE_NAME";
+    private static final String PARAMS_FILE = "/storage/sdcard/Manga/jpn_params.ser";
 
     public static final String TAG = "ImagePagerActivity";
     private ImagePagerAdapter mIPA;
@@ -92,6 +94,27 @@ public class ImagePagerActivity extends FragmentActivity {
         if (savedInstanceState == null && !OcrGeneticDetection.mDoGA) {
             Log.d(TAG, "creating OCR");
             ocr = new Ocr(this, null);
+            /* TODO
+            Parameters params;
+            try
+            {
+                FileInputStream fileIn = new FileInputStream(PARAMS_FILE);
+                ObjectInputStream in = new ObjectInputStream(fileIn);
+                params = (Parameters) in.readObject();
+                in.close();
+                fileIn.close();
+            }catch(IOException i)
+            {
+                Log.d(TAG, "IOException on params file");
+                i.printStackTrace();
+                return;
+            }catch(ClassNotFoundException c)
+            {
+                Log.d(TAG, "Parameters class not found");
+                c.printStackTrace();
+                return;
+            }
+            */
             Parameters params = ocr.getParameters();
             params.setFlag(Parameters.FLAG_DEBUG_MODE, true);
             params.setFlag(Parameters.FLAG_ALIGN_TEXT, false);
@@ -104,7 +127,7 @@ public class ImagePagerActivity extends FragmentActivity {
             params.setVariable("edge_thresh", "44");
             params.setVariable("edge_avg_thresh", "4");
             params.setVariable("single_min_aspect", "0.12387389438495032");
-            params.setVariable("single_mix_aspect", "7.140991507983401");
+            params.setVariable("single_max_aspect", "7.140991507983401");
             params.setVariable("single_min_area", "25");
             params.setVariable("single_min_density", "0.2814948034673991");
             params.setVariable("pair_h_ratio", "1.2320803151162179");
@@ -121,6 +144,20 @@ public class ImagePagerActivity extends FragmentActivity {
             params.setVariable("cluster_min_edge", "35");
             params.setVariable("cluster_min_edge_avg", "35");
 
+            /*
+            try
+            {
+                FileOutputStream fileOut =
+                        new FileOutputStream("/storage/sdcard/Manga/jpn_params.ser");
+                ObjectOutputStream out = new ObjectOutputStream(fileOut);
+                out.writeObject(params);
+                out.close();
+                fileOut.close();
+            }catch(IOException i)
+            {
+                i.printStackTrace();
+            }
+            */
             ocr.setParameters(params);
         }
         
@@ -143,6 +180,7 @@ public class ImagePagerActivity extends FragmentActivity {
         if (id == R.id.action_settings) {
             return true;
         } else if (id == R.id.action_highlight) {
+            Log.d(TAG, "Find text");
             mCurrentFragment.findText();
             return true;
         } else if (id == R.id.action_add_test) {
@@ -155,9 +193,25 @@ public class ImagePagerActivity extends FragmentActivity {
 
         getActionBar().show();
         mCurrentFragment = v;
-        
     }
-    
+
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        int id = data.getIntExtra(DisplayMessageActivity.HIGHLIGHT_ID, -1);
+        if(resultCode == DisplayMessageActivity.UPDATE_HIGHLIGHT) {
+            RectF highlight = (RectF) data.getParcelableExtra(DisplayMessageActivity.HIGHLIGHT);
+            if (id > -1) {
+                Log.d(TAG, highlight.toString());
+                mCurrentFragment.updateHighlight(id, highlight);
+            }
+        } else if(resultCode == DisplayMessageActivity.NEXT) {
+            mCurrentFragment.next(id);
+        } else if(resultCode == DisplayMessageActivity.PREVIOUS) {
+            mCurrentFragment.previous(id);
+        } else if(resultCode == DisplayMessageActivity.DELETE) {
+            mCurrentFragment.delete(id);
+        }
+    }
+
     @Override
     protected void onStop(){
        super.onStop();
@@ -191,7 +245,7 @@ public class ImagePagerActivity extends FragmentActivity {
     
     public static class ImagePagerAdapter extends FragmentStatePagerAdapter {
 
-        private static MangaReader mMangaReader;
+        private static ImageFileReader mMangaReader;
         private static Point mScreenSize;
 
         public ImagePagerAdapter(FragmentManager fm) {
@@ -204,18 +258,24 @@ public class ImagePagerActivity extends FragmentActivity {
             setFile(file_name);
         }
         
-        public void setScreen(Point point) {
-            mScreenSize = point;
+        public void setScreen(Point size) {
+            mScreenSize = size;
         }
 
-        public void setFile(String file_name) throws ZipException, IOException {
+        public void setFile(String file_name) throws IOException {
             Log.v(TAG, "loading file " + file_name);
             setFile(new File(file_name));
-            
         }
 
-        public void setFile(File file) throws ZipException, IOException {
-            mMangaReader = new MangaReader(file, mScreenSize);
+        public void setFile(File file) throws IOException {
+            String name = file.getName();
+            if(name.endsWith("zip")) {
+                mMangaReader = new MangaReader(file, mScreenSize);
+            } else if(name.endsWith("ser")) {
+                mMangaReader = new MangaReader(file, mScreenSize);
+            } else {
+                throw new IOException("unknown file type");
+            }
         }
         
         public static String getFileName() {
@@ -263,6 +323,7 @@ public class ImagePagerActivity extends FragmentActivity {
         private Bitmap mBitmap;
         private View mRootView;
         private List<OcrResult> mResults;
+        private List<Highlighter> mHighlights;
         
         @SuppressWarnings("unused")
         private Highlighter displayHighlight(Rect bounds) {
@@ -287,6 +348,29 @@ public class ImagePagerActivity extends FragmentActivity {
             
         }
 
+        public void next(int id) {
+            id += 1;
+            if(id == mHighlights.size()) id = 0;
+
+            mHighlights.get(id).onClick(mHighlights.get(id));
+        }
+
+        public void previous(int id) {
+            id -= 1;
+            if(id < 0) id = mHighlights.size() - 1;
+
+            mHighlights.get(id).onClick(mHighlights.get(id));
+        }
+
+        public void delete(int id){
+            mHighlights.remove(id);
+        }
+
+        public void updateHighlight(int id, RectF bounds) {
+            Log.d(TAG, String.format("number of highlights %d: %d", mHighlights.size(), id));
+            mHighlights.get(id).updateRectF(bounds);
+        }
+
         public ImageViewTouch getImageView() {
             return mImageView;
         }
@@ -300,9 +384,6 @@ public class ImagePagerActivity extends FragmentActivity {
 
             RectF outRect = new RectF(bounds);
 
-            RectF bitmapRect = mImageView.getBitmapRect();
-            Log.v(TAG, bitmapRect.toString());
-
             RectF highlightRectF = new RectF(bounds);
 
             Matrix dmat = mImageView.getImageViewMatrix();
@@ -310,10 +391,13 @@ public class ImagePagerActivity extends FragmentActivity {
             Log.v(TAG, String.format("dmat %s", dmat.toString()));
 
             dmat.invert(dmat);
-            //dmat.mapRect(outRect, highlightRectF);
 
             outRect.left = (float) Math.max(0.0, outRect.left);
             outRect.top = (float) Math.max(0.0, outRect.top);
+
+            if(mBitmap.isRecycled()) {
+                drawImage();
+            }
 
             outRect.bottom = (float) Math.min(mBitmap.getHeight(), outRect.bottom);
             outRect.right = (float) Math.min(mBitmap.getWidth(), outRect.right);
@@ -368,8 +452,8 @@ public class ImagePagerActivity extends FragmentActivity {
         
         public void findText() {
             CompletionCallback displayHighlightCB = new DisplayHighlightCB();
-            ocr.setCompletionCallback(displayHighlightCB);
             if(mResults == null) {
+                ocr.setCompletionCallback(displayHighlightCB);
                 ocr.enqueue(mBitmap);
             } else {
                 displayHighlightCB.onCompleted(mResults);
@@ -401,32 +485,33 @@ public class ImagePagerActivity extends FragmentActivity {
         };
 
         private class DisplayHighlightCB implements CompletionCallback {
-        
+
             @Override
-            public void onCompleted(List<OcrResult> results) {                
+            public void onCompleted(List<OcrResult> results) {
                 String tag = "DisplayHighlightCB";
                 Log.d(tag, "got some results");
                 ImagePagerActivity IPA = (ImagePagerActivity) getActivity();
-                if(IPA.getActionBar().isShowing()) {
+                if (IPA.getActionBar().isShowing()) {
                     IPA.getActionBar().hide();
                 }
                 mResults = results;
-                if(results.isEmpty()) {
+                if (results.isEmpty()) {
                     Log.d(tag, "no text found");
                 } else {
-
-                    for(int i = 0; i < results.size(); i++) {
-                        if(results.get(i).getBounds().top == 0) {
+                    mHighlights = new ArrayList<Highlighter>();
+                    for (int i = 0; i < results.size(); i++) {
+                        if (results.get(i).getBounds().top == 0) {
                             continue;
                         }
 
-                        displayHighlight(results.get(i).getBounds());
+                        Highlighter tempHI = displayHighlight(results.get(i).getBounds());
+                        tempHI.setHighlightID(i);
+                        mHighlights.add(tempHI);
                         Log.d(tag, results.get(i).getBounds().flattenToString());
                         Log.d(tag, results.get(i).getString());
                     }
                 }
             }
-            
         }
 
         public ImageFragment() {
@@ -451,6 +536,20 @@ public class ImagePagerActivity extends FragmentActivity {
         private void drawImage() {
 
             if(mBitmap == null || mBitmap.isRecycled()) {
+
+                mImageView.setOnLayoutChangeListener(new ImageViewTouchBase.OnLayoutChangeListener() {
+                    @Override
+                    public void onLayoutChanged(boolean changed, int left, int top, int right, int bottom) {
+
+                        if(mHighlights != null) {
+                            for (int i = 0; i < mHighlights.size(); i++) {
+                                mHighlights.get(i).setImagePage(ImageFragment.this);
+                                mHighlights.get(i).setHighlightID(i);
+                            }
+                        }
+                    }
+                });
+
                 mBitmap = ImagePagerAdapter.getImage(position);
                 mImageView.setImageBitmap(mBitmap, null, 1f, 8f);
                 //TODO fix initial image display
