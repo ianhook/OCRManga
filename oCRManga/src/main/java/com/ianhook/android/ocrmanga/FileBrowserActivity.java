@@ -171,6 +171,7 @@ public class FileBrowserActivity extends ActionBarActivity {
 	            
 	            //OGD.startOcr(ocrInit);	            
 	            OGD.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+                return;
 	        }
 
 	        Intent intent;

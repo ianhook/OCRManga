@@ -1,6 +1,7 @@
 package com.ianhook.android.ocrmanga.util;
 
 import android.graphics.Bitmap;
+import android.graphics.Point;
 import android.graphics.Rect;
 import android.util.Log;
 
@@ -11,6 +12,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -33,15 +35,21 @@ public class OcrRectTest extends OcrTestBase {
         readTests();
         if(mTests != null) {
             mLength = mTests.size();
+            mCutOff = 1723200 * mTests.size();
         } else {
             mTests = new ArrayList<OcrTestObject>();
             mLength = 0;
+            mCutOff = 0;
         }
     }
 
     @Override
     public Bitmap getImage() {
         return mTests.get(mCurrentPosition).getImage();
+    }
+
+    public Bitmap getImage(int position) {
+        return mTests.get(position).getImage(OcrTestObject.AUTO_SCALE);
     }
 
     @Override
@@ -53,7 +61,7 @@ public class OcrRectTest extends OcrTestBase {
     @Override
     public int evalResults(List<OcrResult> results) {
         int max = mTests.get(mCurrentPosition).getImageSize();
-        Rect[] tRects = mTests.get(mCurrentPosition).getRects();
+        ArrayList<SerialRect> tRects = mTests.get(mCurrentPosition).getRects();
         // assume sort of results and test data for sweep
         // also assume test data does not contain overlaps
 
@@ -61,64 +69,82 @@ public class OcrRectTest extends OcrTestBase {
         ArrayList<Rect> currentTests = new ArrayList<Rect>();
         ArrayList<Rect> currentResults = new ArrayList<Rect>();
         int currentX = mTests.get(mCurrentPosition).getImageWidth();
-        int count = 0;
         int rPos = 0;
         int tPos = 0;
-        while(count < results.size() + mTests.size()) {
-            Rect rRect = results.get(rPos).getBounds();
-            Rect tRect = tRects[tPos];
+        Rect rRect = null;
+        Rect tRect = null;
+        Log.d(TAG, String.format("Found Rects %d; %d", results.size(), tRects.size()));
+        while((rPos + tPos) < (results.size() + tRects.size())) {
+            ArrayList<Rect> tempRects = new ArrayList<Rect>();
+            if(rPos < results.size()) {
+                rRect = results.get(rPos).getBounds();
+            } else {
+                rRect = null;
+            }
+            if (tPos < tRects.size()) {
+                tRect = tRects.get(tPos).getRect();
+            } else {
+                tRect = null;
+            }
             Rect currentRect;
-            if(rRect.right > tRect.right) {
+            if(rRect != null && (tRect == null || rRect.right > tRect.right)) {
                 rPos += 1;
                 currentX = rRect.right;
                 currentRect = rRect;
+                Log.d(TAG, String.format("%d: %d Result Rect: %s", rPos, currentX, currentRect.toString()));
 
                 for(Rect rect : currentTests) {
                     if(rect.left > currentX) {
                         //can't intersect anything anymore
-                        currentTests.remove(rect);
+                        //currentTests.remove(rect);
                     } else if(Rect.intersects(rect,currentRect)) {
                         Rect intersection = new Rect(currentRect);
                         intersection.intersect(rect);
                         //because both rects are subtracted in full we add back the
                         // intersection twice
                         max += intersection.width() * intersection.height() * 2;
+                        tempRects.add(rect);
+                    } else {
+                        tempRects.add(rect);
                     }
-
                 }
                 currentResults.add(currentRect);
+                currentTests = tempRects;
             } else {
                 tPos += 1;
                 currentX = tRect.right;
                 currentRect = tRect;
+                Log.d(TAG, String.format("%d: %d, Expected Rect: %s", tPos, currentX, currentRect.toString()));
 
                 for(Rect rect : currentResults) {
                     if(rect.left > currentX) {
                         //can't intersect anything anymore
-                        currentResults.remove(rect);
+                        //currentResults.remove(rect);
                     } else if(Rect.intersects(rect,currentRect)) {
                         Rect intersection = new Rect(currentRect);
                         intersection.intersect(rect);
                         max += intersection.width() * intersection.height() * 2;
+                        tempRects.add(rect);
+                    } else {
+                        tempRects.add(rect);
                     }
 
                 }
                 currentTests.add(currentRect);
+                currentResults = tempRects;
             }
+            Log.d(TAG, String.format("Current Tests: %d; Current Results: %d", currentTests.size(), currentResults.size()));
 
             //subtract rect area from image area
             max -= currentRect.width() * currentRect.height();
-
-            count += 1;
         }
 
 
         return max;
     }
 
-    public void writeTests(String zipFile, int position, List<OcrResult> results) {
-        OcrTestObject test = new OcrTestObject();
-        test.addRects(results);
+    public void writeTests(String zipFile, int position, List<OcrResult> results, Point size) {
+        OcrTestObject test = new OcrTestObject(zipFile, position, results, size);
         mTests.add(test);
         try
         {
@@ -144,6 +170,7 @@ public class OcrRectTest extends OcrTestBase {
             mTests = (ArrayList<OcrTestObject>) in.readObject();
             in.close();
             fileIn.close();
+            Log.d(TAG, mTests.get(0).toString());
         }catch(IOException i)
         {
             i.printStackTrace();
@@ -159,23 +186,74 @@ public class OcrRectTest extends OcrTestBase {
         }
     }
 
-    private class OcrTestObject implements Serializable {
+    private class SerialRect implements Serializable {
+        private transient Rect mRect;
+
+        SerialRect(){};
+
+        SerialRect(Rect rect) {
+            mRect = rect;
+        }
+
+        public Rect getRect() {
+            return mRect;
+        }
+
+        private void writeObject(ObjectOutputStream outputStream) throws IOException {
+            outputStream.writeInt(mRect.left);
+            outputStream.writeInt(mRect.right);
+            outputStream.writeInt(mRect.top);
+            outputStream.writeInt(mRect.bottom);
+        }
+
+        private void readObject(ObjectInputStream inputStream) throws IOException {
+            int left = inputStream.readInt();
+            int right = inputStream.readInt();
+            int top = inputStream.readInt();
+            int bottom = inputStream.readInt();
+
+            mRect = new Rect(left, top, right, bottom);
+        }
+    }
+
+    public class OcrTestObject implements Serializable {
+        private static final long serialVersionUID = 1L;
+        public static final int AUTO_SCALE = -1;
+
         private String mZipFileName;
         private int mImagePosition;
-        private Rect[] mRects;
+        private ArrayList<SerialRect> mRects;
         private int mImageSize = -1;
         private int mWidth = -1;
+        private Point mSize;
+
+        OcrTestObject(String zipFile, int position, List<OcrResult> results, Point size) {
+            setImage(zipFile, position);
+            addRects(results);
+            mSize = size;
+        }
 
         public Bitmap getImage() {
+            //get the full size image
+            return getImage(1);
+        }
+
+        public Bitmap getImage(int scale) {
             Bitmap bm = null;
             try {
                 MangaReader mr = new MangaReader(mZipFileName);
-                bm = mr.getImage(mImagePosition);
+                if(scale == AUTO_SCALE) {
+                    bm = mr.getImage(mImagePosition);
+                } else {
+                    mr.setScreen(mSize);
+                    bm = mr.getImage(mImagePosition, scale);
+                }
                 mImageSize = bm.getHeight() * bm.getWidth();
             } catch (IOException e) {
                 e.printStackTrace();
             }
             return bm;
+
         }
 
         public String getFileName() {
@@ -207,21 +285,51 @@ public class OcrRectTest extends OcrTestBase {
             return mWidth;
         }
 
-
-        public Rect[] getRects() {
+        public ArrayList<SerialRect> getRects() {
             return mRects;
         }
 
         public void addRects(List<OcrResult> r) {
-            mRects = new Rect[r.size()];
+            mRects = new ArrayList<SerialRect>();
             for(int i = 0; i < r.size(); i++) {
-                mRects[i] = r.get(i).getBounds();
+                mRects.add(new SerialRect(r.get(i).getBounds()));
             }
         }
 
         public void setImage(String file_name, int position) {
             mZipFileName = file_name;
             mImagePosition = position;
+        }
+
+        public String toString() {
+            return String.format("Test: %s %d; Rect Count %d", mZipFileName, mImagePosition, mRects.size());
+        }
+
+        private void readObject(ObjectInputStream in) throws ClassNotFoundException, IOException {
+            Log.d(TAG, "reading");
+            mZipFileName = "/storage/sdcard/Manga/" + (String) in.readObject();
+            mImagePosition = in.readInt();
+            mImageSize = in.readInt();
+            mWidth = in.readInt();
+            mSize = new Point(in.readInt(), in.readInt());
+            mRects = (ArrayList<SerialRect>) in.readObject();
+
+            Log.d(TAG, mZipFileName);
+            Log.d(TAG, String.format("Rects Found %d", mRects.size()));
+            for(SerialRect r : mRects) {
+                Log.d(TAG, r.toString());
+            }
+        }
+
+        private void writeObject(ObjectOutputStream out) throws IOException {
+
+            out.writeObject(mZipFileName);
+            out.writeInt(mImagePosition);
+            out.writeInt(mImageSize);
+            out.writeInt(mWidth);
+            out.writeInt(mSize.x);
+            out.writeInt(mSize.y);
+            out.writeObject(mRects);
         }
 
     }

@@ -32,6 +32,7 @@ public class MangaReader extends ImageFileReader {
 
     public MangaReader(String file_name) throws IOException {
         super(file_name);
+        Log.d(TAG, String.format("init with: %s", file_name));
     }
 
     public MangaReader(File file) throws IOException {

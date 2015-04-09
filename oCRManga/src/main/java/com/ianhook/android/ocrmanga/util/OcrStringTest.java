@@ -23,6 +23,7 @@ import java.util.Scanner;
  */
 public class OcrStringTest extends OcrTestBase {
     private static final String TAG = "com.ianhook.OcrStrTest";
+    public static int BEST = 20401;
 
     private File[] mImageDir;
 
@@ -31,6 +32,7 @@ public class OcrStringTest extends OcrTestBase {
         mImageDir = (new File(temp_f, "test_images")).listFiles();
         Log.d(TAG, temp_f.getAbsolutePath());
         mLength = mImageDir.length;
+        mCutOff = BEST;
 
     }
 

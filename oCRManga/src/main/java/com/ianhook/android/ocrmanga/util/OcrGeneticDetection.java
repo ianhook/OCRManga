@@ -33,7 +33,7 @@ import com.googlecode.tesseract.android.TessBaseAPI;
 public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
     private static final String TAG = "com.ianhook.OcrGD";
     //whether the app should attempt learning
-    public final static Boolean mDoGA = true;
+    public final static Boolean mDoGA = false;
     //whether learning should evaluate final message text or just boxes
     public final static Boolean textEval = true;
     
@@ -205,8 +205,8 @@ public class OcrGeneticDetection extends AsyncTask<Void, Void, Void>{
             Log.d(TAG, String.format("start evolution: %d", mGeneration));
             population.evolve();
             ((OcrFitnessFunction) myFunc).printBest();
-            Log.d(TAG, String.format("end evolution: %d", mGeneration));
-            if(mBest > 20401) {
+            Log.d(TAG, String.format("end evolution: %d;%d", mGeneration, success_runs));
+            if(mBest > mOcrTest.getCutOff()) {
                 success_runs += 1;
             }
         }

@@ -5,7 +5,11 @@ import it.sephiroth.android.library.imagezoom.ImageViewTouchBase;
 import it.sephiroth.android.library.imagezoom.ImageViewTouchBase.DisplayType;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -53,6 +57,7 @@ public class ImagePagerActivity extends FragmentActivity {
     private final static String PAGE_NUM = "page";
     public final static String FILE_NAME = "com.ianhook.android.ocrmanga.FILE_NAME";
     private static final String PARAMS_FILE = "/storage/sdcard/Manga/jpn_params.ser";
+    private static final String BEST_PARAMS_FILE = "/storage/sdcard/Manga/ga_best_params.ser";
 
     public static final String TAG = "ImagePagerActivity";
     private ImagePagerAdapter mIPA;
@@ -116,11 +121,12 @@ public class ImagePagerActivity extends FragmentActivity {
             }
             */
             Parameters params = ocr.getParameters();
-            params.setFlag(Parameters.FLAG_DEBUG_MODE, true);
+            params.setFlag(Parameters.FLAG_DEBUG_MODE, false);
             params.setFlag(Parameters.FLAG_ALIGN_TEXT, false);
             params.setLanguage("jpn");
             params.setPageSegMode(TessBaseAPI.PageSegMode.PSM_SINGLE_BLOCK_VERT_TEXT);
             //params.setPageSegMode(TessBaseAPI.PageSegMode.PSM_AUTO);
+            /*
             //Fitness: 20304
             params.setVariable("edge_tile_x", "30");
             params.setVariable("edge_tile_y", "32");
@@ -143,7 +149,31 @@ public class ImagePagerActivity extends FragmentActivity {
             params.setVariable("cluster_min_fdr", "3.0215533597321147");
             params.setVariable("cluster_min_edge", "35");
             params.setVariable("cluster_min_edge_avg", "35");
+            */
 
+            /*
+            params.setVariable("edge_tile_x", "17");
+            params.setVariable("edge_tile_y", "51");
+            params.setVariable("edge_thresh", "42");
+            params.setVariable("edge_avg_thresh", "26");
+            params.setVariable("single_min_aspect", "0.1226374440099194");
+            params.setVariable("single_max_aspect", "4.811634464353835");
+            params.setVariable("single_min_area", "6");
+            params.setVariable("single_min_density", "0.3068444569992789");
+            params.setVariable("pair_h_ratio", "1.7957964645383617");
+            params.setVariable("pair_d_ratio", "1.4796231886128681");
+            params.setVariable("pair_h_dist_ratio", "0.25631797578843374");
+            params.setVariable("pair_v_dist_ratio", "0.10635169868222327");
+            params.setVariable("pair_h_shared", "0.20969381113262964");
+            params.setVariable("cluster_width_spacing", "5");
+            params.setVariable("cluster_shared_edge", "0.8834573555007488");
+            params.setVariable("cluster_h_ratio", "1.4790379594586032");
+            params.setVariable("cluster_min_blobs", "5");
+            params.setVariable("cluster_min_aspect", "1.78901587228034");
+            params.setVariable("cluster_min_fdr", "2.605697183075306");
+            params.setVariable("cluster_min_edge", "25");
+            params.setVariable("cluster_min_edge_avg", "10");
+            */
             /*
             try
             {
@@ -158,6 +188,19 @@ public class ImagePagerActivity extends FragmentActivity {
                 i.printStackTrace();
             }
             */
+            try {
+                FileInputStream fileIn =
+                        new FileInputStream(PARAMS_FILE);
+                ObjectInputStream in = new ObjectInputStream(fileIn);
+                params = (Parameters) in.readObject();
+                in.close();
+                fileIn.close();
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            } catch(IOException i) {
+                i.printStackTrace();
+            }
+
             ocr.setParameters(params);
         }
         
@@ -309,6 +352,10 @@ public class ImagePagerActivity extends FragmentActivity {
         
         static private Bitmap getImage(int position) {
             return mMangaReader.getImage(position);
+        }
+
+        static public Point getScreenSize() {
+            return mScreenSize;
         }
     }
 
@@ -464,7 +511,7 @@ public class ImagePagerActivity extends FragmentActivity {
             //find the text in the image, in case it hasn't been done already
             //findText();
             OcrRectTest ocrTest = new OcrRectTest();
-            ocrTest.writeTests(ImagePagerAdapter.getFileName(), position, mResults);
+            ocrTest.writeTests(ImagePagerAdapter.getFileName(), position, mResults, ImagePagerAdapter.getScreenSize());
         }
     
         private OnLongClickListener mLongClickListener = new OnLongClickListener() {

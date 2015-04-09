@@ -14,11 +14,13 @@ public abstract class OcrTestBase {
 
     protected int mCurrentPosition;
     protected int mLength;
+    protected int mCutOff;
 
     public boolean mDebug = false;
 
     public OcrTestBase() {
         mLength = 0;
+        mCutOff = 0;
         initTest();
         resetPosition();
     }
@@ -43,6 +45,10 @@ public abstract class OcrTestBase {
         } else {
             return false;
         }
+    }
+
+    public int getCutOff() {
+        return mCutOff;
     }
 
     /*

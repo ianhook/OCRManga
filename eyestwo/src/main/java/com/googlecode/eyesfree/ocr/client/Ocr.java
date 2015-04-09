@@ -39,12 +39,16 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Set;
 
 import com.googlecode.eyesfree.ocr.service.OcrService;
+import com.googlecode.eyesfree.textdetect.HydrogenTextDetector;
 import com.googlecode.tesseract.android.TessBaseAPI;
 
 /**
@@ -851,5 +855,38 @@ public class Ocr {
                 return new Parameters[size];
             }
         };
+
+
+        private void writeObject(ObjectOutputStream outputStream) throws IOException, IllegalAccessException {
+            outputStream.writeInt(mPageSegMode);
+            outputStream.writeObject(mLanguage);
+
+            Set<String> set = getVariableKeys();
+            outputStream.writeInt(set.size());
+            for(String f : getVariableKeys()) {
+                if(getVariable(f) != null) {
+                    outputStream.writeObject(f);
+                    outputStream.writeObject(getVariable(f));
+                }
+
+            }
+        }
+
+        private void readObject(ObjectInputStream inputStream) throws IOException, IllegalAccessException, ClassNotFoundException {
+
+            mVariables = new Bundle();
+            mFlags = new Bundle();
+            mPageSegMode = inputStream.readInt();
+            mLanguage = (String) inputStream.readObject();
+
+            int size = inputStream.readInt();
+            for(int i = 0; i < size; i++) {
+                String f = (String) inputStream.readObject();
+                Log.d(TAG, f);
+                String in = (String) inputStream.readObject();
+                Log.d(TAG, in);
+                setVariable(f, in);
+            }
+        }
     }
 }
